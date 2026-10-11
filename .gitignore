@@ -1,0 +1,21 @@
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# IDE
+.idea/
+*.iml
+.vscode/
+out/
+
+# OS
+.DS_Store
+
+# Local secrets / data (the app keeps these in ~/.property-manager-sentry, never in the repo)
+application-local.*
+credentials.json
+tokens/
+*.mv.db
+*.trace.db
+.env

@@ -1,0 +1,48 @@
+# Defaults shipped with the app. Personal settings (API key, model, Gmail query, ...) go in
+# ~/.property-manager-sentry/application.yml, which is imported below and wins over this file.
+# (Set sentry.user-config to point somewhere else, e.g. in tests.)
+sentry:
+  data-dir: ${user.home}/.property-manager-sentry
+  gmail:
+    application-name: Property Manager Sentry
+    credentials-file: ${sentry.data-dir}/credentials.json
+    tokens-dir: ${sentry.data-dir}/tokens
+    query: "in:inbox is:unread"
+    max-messages: 50
+  triage:
+    concurrency: 2
+    max-body-chars: 20000
+    timeout: 90s
+
+spring:
+  application:
+    name: property-manager-sentry
+  config:
+    import: optional:file:${sentry.user-config:${user.home}/.property-manager-sentry/application.yml}
+  main:
+    web-application-type: none
+    banner-mode: off
+  datasource:
+    url: jdbc:h2:file:${sentry.data-dir}/sentry;AUTO_SERVER=FALSE
+    username: sa
+    password: ""
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    locations: classpath:db/migration
+  ai:
+    google:
+      genai:
+        api-key: ${GOOGLE_API_KEY:}
+        chat:
+          model: gemini-2.5-flash
+          temperature: 0.0
+
+logging:
+  level:
+    root: info
+    org.hibernate.orm.deprecation: error
+  file:
+    name: ${sentry.data-dir}/logs/sentry.log

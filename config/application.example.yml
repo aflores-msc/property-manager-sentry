@@ -1,0 +1,21 @@
+# Copy to ~/.property-manager-sentry/application.yml and fill in.
+# Anything set here overrides the defaults in src/main/resources/application.yml.
+
+spring:
+  ai:
+    google:
+      genai:
+        # Gemini API key from https://aistudio.google.com/apikey
+        # (or leave this out and set the GOOGLE_API_KEY environment variable instead)
+        api-key: your-gemini-api-key
+        chat:
+          model: gemini-2.5-flash
+
+sentry:
+  gmail:
+    # Any Gmail search query: https://support.google.com/mail/answer/7190
+    query: "in:inbox is:unread newer_than:14d"
+    max-messages: 50
+  triage:
+    # Emails triaged in parallel. Keep it low on the Gemini free tier (rate limits).
+    concurrency: 2

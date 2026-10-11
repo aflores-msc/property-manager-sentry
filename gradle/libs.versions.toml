@@ -1,0 +1,23 @@
+[versions]
+spring-boot = "4.1.1"
+spring-ai = "2.0.1"
+langgraph4j = "1.9.4"
+javafx = "25.0.4"
+atlantafx = "3.0.0"
+google-api-client = "2.9.1"
+google-oauth-client = "1.39.0"
+google-gmail = "v1-rev20261005-2.0.0"
+jsoup = "1.23.2"
+
+[libraries]
+spring-ai-bom = { module = "org.springframework.ai:spring-ai-bom", version.ref = "spring-ai" }
+spring-ai-starter-google-genai = { module = "org.springframework.ai:spring-ai-starter-model-google-genai" }
+langgraph4j-core = { module = "org.bsc.langgraph4j:langgraph4j-core", version.ref = "langgraph4j" }
+atlantafx = { module = "io.github.mkpaz:atlantafx-base", version.ref = "atlantafx" }
+google-api-client = { module = "com.google.api-client:google-api-client", version.ref = "google-api-client" }
+google-oauth-client-jetty = { module = "com.google.oauth-client:google-oauth-client-jetty", version.ref = "google-oauth-client" }
+google-gmail = { module = "com.google.apis:google-api-services-gmail", version.ref = "google-gmail" }
+jsoup = { module = "org.jsoup:jsoup", version.ref = "jsoup" }
+
+[plugins]
+spring-boot = { id = "org.springframework.boot", version.ref = "spring-boot" }

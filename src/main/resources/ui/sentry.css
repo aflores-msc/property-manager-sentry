@@ -1,0 +1,56 @@
+/*
+ * App-specific styles on top of the AtlantaFX theme. Colors use the theme's looked-up
+ * color variables (-color-*), so everything follows the light/dark switch automatically.
+ */
+
+.app-header {
+    -fx-background-color: -color-bg-subtle;
+    -fx-border-color: transparent transparent -color-border-default transparent;
+}
+
+.status-bar {
+    -fx-background-color: -color-bg-subtle;
+    -fx-border-color: -color-border-default transparent transparent transparent;
+}
+
+/* ---- pills -------------------------------------------------------------------------------- */
+
+.pill {
+    -fx-padding: 2 10 2 10;
+    -fx-background-radius: 999;
+    -fx-font-size: 0.85em;
+    -fx-font-weight: bold;
+    -fx-text-fill: -color-fg-emphasis;
+}
+
+.priority-urgent   { -fx-background-color: -color-danger-emphasis; }
+.priority-high     { -fx-background-color: -color-warning-emphasis; }
+.priority-medium   { -fx-background-color: -color-accent-emphasis; }
+.priority-low      { -fx-background-color: -color-neutral-emphasis; }
+
+.category-maintenance    { -fx-background-color: -color-accent-muted;  -fx-text-fill: -color-fg-default; }
+.category-city-notice    { -fx-background-color: -color-warning-muted; -fx-text-fill: -color-fg-default; }
+.category-tenant-dispute { -fx-background-color: -color-danger-muted;  -fx-text-fill: -color-fg-default; }
+
+.status-open        { -fx-background-color: -color-accent-subtle;  -fx-text-fill: -color-accent-fg; }
+.status-in-progress { -fx-background-color: -color-warning-subtle; -fx-text-fill: -color-warning-fg; }
+.status-resolved    { -fx-background-color: -color-success-subtle; -fx-text-fill: -color-success-fg; }
+
+/* ---- table -------------------------------------------------------------------------------- */
+
+/* Tickets not opened yet: bold text and an accent bar on the left edge. */
+.table-row-cell:unread {
+    -fx-font-weight: bold;
+    -fx-border-color: transparent transparent transparent -color-accent-emphasis;
+    -fx-border-width: 0 0 0 4;
+}
+
+/* ---- detail pane -------------------------------------------------------------------------- */
+
+.detail-pane {
+    -fx-background-color: -color-bg-default;
+}
+
+.raw-email {
+    -fx-font-family: "monospace";
+}
