@@ -3,7 +3,8 @@ package com.propertymanager.sentry.inbox;
 import static com.propertymanager.sentry.triage.Fixtures.routing;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.ArrayList;
+import java.io.IOException;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -65,6 +66,9 @@ class InboxSyncServiceIT {
         jdbc.update("delete from ticket");
         jdbc.update("delete from processed_email");
         mailbox.emails.clear();
+        mailbox.labels.clear();
+        mailbox.failLabeling = false;
+        mailbox.readOnly = false;
         agents.routes.clear();
         agents.failures.clear();
         agents.routeCalls.set(0);
@@ -73,6 +77,7 @@ class InboxSyncServiceIT {
 
     @Test
     void createsTicketsSkipsIgnoredAndRetriesFailures() {
+        mailbox.readOnly = true; // labels off: de-duplication relies on the local processed_email table
         mailbox.add(Fixtures.email("m1", "Sink leaking"));
         mailbox.add(Fixtures.email("m2", "Code violation notice"));
         mailbox.add(Fixtures.email("m3", "Noisy neighbors"));
@@ -110,6 +115,55 @@ class InboxSyncServiceIT {
         assertThat(second.ticketed()).isEqualTo(1);
         assertThat(agents.routeCalls).hasValue(1);
         assertThat(tickets.findAll()).hasSize(4);
+    }
+
+    @Test
+    void labelsTriagedEmailsSoTheyAreNotListedAgain() {
+        mailbox.add(Fixtures.email("m1", "Sink leaking"));
+        mailbox.add(Fixtures.email("m2", "Newsletter"));
+        mailbox.add(Fixtures.email("m3", "Model error"));
+        agents.routes.put("m1", routing(Category.MAINTENANCE, Priority.HIGH));
+        agents.routes.put("m2", routing(Category.IGNORED, Priority.LOW));
+        agents.failures.add("m3");
+
+        syncService.startSync(SyncTrigger.MANUAL).join();
+
+        assertThat(mailbox.labels).containsOnly(
+                Map.entry("m1", "Maintenance"),
+                Map.entry("m2", FakeMailbox.PROCESSED_ONLY)); // m3 failed: left unlabeled for a retry
+        var second = syncService.startSync(SyncTrigger.MANUAL).join();
+        assertThat(second.alreadyKnown()).isZero(); // labeled ones are no longer listed at all
+        assertThat(agents.routeCalls).hasValue(4);  // m1, m2, m3, then only m3 again
+    }
+
+    @Test
+    void labelsKnownEmailsThatAreStillListed() {
+        // Processed while labeling was off (or a label call failed): known locally, still listed by Gmail.
+        mailbox.add(Fixtures.email("m1", "Sink leaking"));
+        agents.routes.put("m1", routing(Category.MAINTENANCE, Priority.HIGH));
+        mailbox.failLabeling = true;
+        syncService.startSync(SyncTrigger.MANUAL).join();
+        assertThat(mailbox.labels).isEmpty();
+
+        mailbox.failLabeling = false;
+        mailbox.readOnly = false;
+        var second = syncService.startSync(SyncTrigger.MANUAL).join();
+
+        assertThat(second.alreadyKnown()).isEqualTo(1);
+        assertThat(agents.routeCalls).hasValue(1); // not re-triaged
+        assertThat(mailbox.labels).containsOnly(Map.entry("m1", FakeMailbox.PROCESSED_ONLY));
+    }
+
+    @Test
+    void labelingFailureDoesNotLoseTheTicket() {
+        mailbox.add(Fixtures.email("m1", "Sink leaking"));
+        agents.routes.put("m1", routing(Category.MAINTENANCE, Priority.HIGH));
+        mailbox.failLabeling = true;
+
+        var summary = syncService.startSync(SyncTrigger.MANUAL).join();
+
+        assertThat(summary.ticketed()).isEqualTo(1);
+        assertThat(tickets.findAll()).hasSize(1);
     }
 
     @Test
@@ -171,20 +225,37 @@ class InboxSyncServiceIT {
         }
     }
 
+    /** In-memory mailbox that, like Gmail with labels on, stops listing messages once labeled. */
     static class FakeMailbox implements MailboxClient {
+        static final String PROCESSED_ONLY = "(processed)";
+
         final Map<String, InboundEmail> emails = new LinkedHashMap<>();
+        final Map<String, String> labels = new ConcurrentHashMap<>();
         volatile boolean broken;
+        volatile boolean failLabeling;
+        volatile boolean readOnly;
 
         void add(InboundEmail email) {
             emails.put(email.id(), email);
         }
 
         @Override
-        public List<String> listCandidateIds() throws java.io.IOException {
+        public List<String> listCandidateIds() throws IOException {
             if (broken) {
-                throw new java.io.IOException("Gmail unreachable");
+                throw new IOException("Gmail unreachable");
             }
-            return new ArrayList<>(emails.keySet());
+            return emails.keySet().stream().filter(id -> !labels.containsKey(id)).toList();
+        }
+
+        @Override
+        public void markTriaged(Collection<String> messageIds, String category) throws IOException {
+            if (failLabeling) {
+                throw new IOException("403 insufficient permissions");
+            }
+            if (readOnly) {
+                return;
+            }
+            messageIds.forEach(id -> labels.put(id, category == null ? PROCESSED_ONLY : category));
         }
 
         @Override

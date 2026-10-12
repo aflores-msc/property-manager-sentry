@@ -9,6 +9,11 @@ sentry:
     tokens-dir: ${sentry.data-dir}/tokens
     query: "in:inbox is:unread"
     max-messages: 50
+    labels:
+      # Label triaged emails in Gmail (Sentry/Processed, Sentry/Maintenance, ...) and skip labeled
+      # ones on later syncs. Needs the gmail.modify scope; set to false to stay read-only.
+      enabled: true
+      prefix: Sentry
   triage:
     concurrency: 2
     max-body-chars: 20000

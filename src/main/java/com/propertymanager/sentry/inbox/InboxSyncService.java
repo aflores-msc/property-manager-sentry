@@ -35,6 +35,10 @@ import org.springframework.stereotype.Service;
  * <p>Emails are processed in parallel on virtual threads, with a semaphore capping how many
  * LLM conversations run at once ({@code sentry.triage.concurrency}). Only one sync runs at a
  * time; a second request while one is running is ignored.
+ *
+ * <p>After an email is stored, it is also marked in the mailbox ({@link MailboxClient#markTriaged})
+ * so later syncs don't list it again. That step is best effort: if it fails, the local
+ * {@code processed_email} table still keeps the email from being triaged twice.
  */
 @Service
 public class InboxSyncService {
@@ -103,6 +107,10 @@ public class InboxSyncService {
         List<String> toProcess = candidates.stream().filter(id -> !known.contains(id)).toList();
         events.publishEvent(new SyncEvent.Planned(candidates.size(), known.size(), toProcess.size()));
 
+        // Known emails still being listed were processed before labeling was on, or their
+        // labeling failed: label them now so they stop showing up.
+        markTriaged(known, null);
+
         var ticketed = new AtomicInteger();
         var ignored = new AtomicInteger();
         var failed = new AtomicInteger();
@@ -150,11 +158,31 @@ public class InboxSyncService {
             return new EmailResult("", new TriageOutcome.Failed("download failed: " + e.getMessage()), null);
         }
         TriageOutcome outcome = triageWithTimeout(email);
+        Long ticketId;
         try {
-            return new EmailResult(email.subject(), outcome, tickets.record(email, outcome));
+            ticketId = tickets.record(email, outcome);
         } catch (Exception e) {
             log.error("Could not store triage result for {}", emailId, e);
             return new EmailResult(email.subject(), new TriageOutcome.Failed("database error: " + e.getMessage()), null);
+        }
+        // Label only after the result is safely stored; failed emails stay unlabeled and are retried.
+        switch (outcome) {
+            case TriageOutcome.Ticketed(var routing, _) -> markTriaged(Set.of(emailId), routing.category().label());
+            case TriageOutcome.Ignored _ -> markTriaged(Set.of(emailId), null);
+            case TriageOutcome.Failed _ -> { }
+        }
+        return new EmailResult(email.subject(), outcome, ticketId);
+    }
+
+    private void markTriaged(Set<String> emailIds, String category) {
+        if (emailIds.isEmpty()) {
+            return;
+        }
+        try {
+            mailbox.markTriaged(emailIds, category);
+        } catch (Exception e) {
+            log.warn("Could not label {} message(s) in the mailbox (they stay de-duplicated locally): {}",
+                    emailIds.size(), e.toString());
         }
     }
 

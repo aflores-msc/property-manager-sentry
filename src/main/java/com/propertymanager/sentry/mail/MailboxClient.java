@@ -1,6 +1,7 @@
 package com.propertymanager.sentry.mail;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -17,4 +18,15 @@ public interface MailboxClient {
 
     /** Downloads one message in full. */
     InboundEmail fetch(String messageId) throws IOException;
+
+    /**
+     * Records in the mailbox itself that these messages went through triage, so later calls to
+     * {@link #listCandidateIds()} leave them out. Mailboxes that can't do this ignore the call.
+     *
+     * @param messageIds the triaged messages
+     * @param category   display name of the ticket category (e.g. "City Notice"), or {@code null}
+     *                   for messages that were processed without creating a ticket
+     */
+    default void markTriaged(Collection<String> messageIds, String category) throws IOException {
+    }
 }

@@ -8,6 +8,7 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
 
@@ -32,13 +33,26 @@ public record SentryProperties(
      * @param query           Gmail search query selecting the messages to triage
      * @param maxMessages     upper bound on messages fetched per sync, so a huge unread
      *                        backlog can't trigger hundreds of LLM calls at once
+     * @param labels          whether and how triaged emails are labeled in Gmail
      */
     public record Gmail(
             @NotBlank String applicationName,
             @NotNull Path credentialsFile,
             @NotNull Path tokensDir,
             @NotBlank String query,
-            @Min(1) @Max(500) int maxMessages) {
+            @Min(1) @Max(500) int maxMessages,
+            @Valid @NotNull Labels labels) {
+    }
+
+    /**
+     * @param enabled label triaged emails in Gmail and leave labeled ones out of later syncs.
+     *                Needs the {@code gmail.modify} scope; when false the app stays read-only.
+     * @param prefix  parent label, e.g. {@code Sentry} gives {@code Sentry/Processed},
+     *                {@code Sentry/Maintenance}, ...
+     */
+    public record Labels(
+            boolean enabled,
+            @NotBlank @Pattern(regexp = "[^/]+", message = "must not contain '/'") String prefix) {
     }
 
     /**
