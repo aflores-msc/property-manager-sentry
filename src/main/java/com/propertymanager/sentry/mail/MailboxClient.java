@@ -5,8 +5,8 @@ import java.util.Collection;
 import java.util.List;
 
 /**
- * Source of emails to triage. Gmail is the only implementation, but keeping it behind an
- * interface lets the sync logic be tested without network access or OAuth.
+ * Source of emails to triage. Gmail is the only implementation, but keeping it behind an interface
+ * lets the sync logic be tested without network access or OAuth.
  */
 public interface MailboxClient {
 
@@ -24,13 +24,14 @@ public interface MailboxClient {
      * {@link #listCandidateIds()} leave them out. Mailboxes that can't do this ignore the call.
      *
      * @param messageIds the triaged messages
-     * @param category   display name of the ticket category (e.g. "City Notice"), or {@code null}
-     *                   for messages that were processed without creating a ticket
+     * @param category display name of the ticket category (e.g. "City Notice"), or {@code null} for
+     *     messages that were processed without creating a ticket
      */
-    default void markTriaged(Collection<String> messageIds, String category) throws IOException {
-    }
+    default void markTriaged(Collection<String> messageIds, String category) throws IOException {}
 
-    /** Stops waiting for a pending browser authorization (see {@link MailboxAuthorizationEvent}), if any. */
-    default void cancelAuthorization() {
-    }
+    /**
+     * Stops waiting for a pending browser authorization (see {@link MailboxAuthorizationEvent}), if
+     * any.
+     */
+    default void cancelAuthorization() {}
 }

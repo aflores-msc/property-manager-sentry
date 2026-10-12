@@ -1,10 +1,9 @@
 package com.propertymanager.sentry.inbox;
 
+import com.propertymanager.sentry.config.UserPreferences;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.concurrent.ScheduledFuture;
-
-import com.propertymanager.sentry.config.UserPreferences;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.event.ContextRefreshedEvent;
@@ -27,7 +26,8 @@ public class AutoSyncScheduler {
     private final UserPreferences preferences;
     private ScheduledFuture<?> task;
 
-    public AutoSyncScheduler(TaskScheduler scheduler, InboxSyncService syncService, UserPreferences preferences) {
+    public AutoSyncScheduler(
+            TaskScheduler scheduler, InboxSyncService syncService, UserPreferences preferences) {
         this.scheduler = scheduler;
         this.syncService = syncService;
         this.preferences = preferences;
@@ -51,10 +51,11 @@ public class AutoSyncScheduler {
         }
         if (minutes > 0) {
             Duration interval = Duration.ofMinutes(minutes);
-            task = scheduler.scheduleWithFixedDelay(
-                    () -> syncService.startSync(SyncTrigger.SCHEDULED).join(),
-                    Instant.now().plus(interval),
-                    interval);
+            task =
+                    scheduler.scheduleWithFixedDelay(
+                            () -> syncService.startSync(SyncTrigger.SCHEDULED).join(),
+                            Instant.now().plus(interval),
+                            interval);
             log.info("Auto-sync every {} minute(s)", minutes);
         } else {
             log.info("Auto-sync disabled");

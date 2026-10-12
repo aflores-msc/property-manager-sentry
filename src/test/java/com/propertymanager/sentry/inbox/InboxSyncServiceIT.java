@@ -3,15 +3,6 @@ package com.propertymanager.sentry.inbox;
 import static com.propertymanager.sentry.triage.Fixtures.routing;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.io.IOException;
-import java.util.Collection;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.atomic.AtomicInteger;
-
 import com.propertymanager.sentry.mail.InboundEmail;
 import com.propertymanager.sentry.mail.MailboxClient;
 import com.propertymanager.sentry.ticket.TicketService;
@@ -25,6 +16,14 @@ import com.propertymanager.sentry.triage.MaintenanceDetails;
 import com.propertymanager.sentry.triage.Priority;
 import com.propertymanager.sentry.triage.RoutingDecision;
 import com.propertymanager.sentry.triage.TriageAgents;
+import java.io.IOException;
+import java.util.Collection;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,30 +35,25 @@ import org.springframework.context.event.EventListener;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 /**
- * Full Spring context (Flyway, JPA on in-memory H2, the real LangGraph4j graph) with a fake
- * mailbox and fake LLM agents, so it runs offline and deterministically.
+ * Full Spring context (Flyway, JPA on in-memory H2, the real LangGraph4j graph) with a fake mailbox
+ * and fake LLM agents, so it runs offline and deterministically.
  */
-@SpringBootTest(properties = {
-        "sentry.user-config=build/no-user-config.yml",
-        "sentry.data-dir=build/test-data",
-        "spring.datasource.url=jdbc:h2:mem:sentry-it;DB_CLOSE_DELAY=-1",
-        "spring.ai.google.genai.api-key=test-key",
-        "logging.file.name="
-})
+@SpringBootTest(
+        properties = {
+            "sentry.user-config=build/no-user-config.yml",
+            "sentry.data-dir=build/test-data",
+            "spring.datasource.url=jdbc:h2:mem:sentry-it;DB_CLOSE_DELAY=-1",
+            "spring.ai.google.genai.api-key=test-key",
+            "logging.file.name="
+        })
 class InboxSyncServiceIT {
 
-    @Autowired
-    InboxSyncService syncService;
-    @Autowired
-    TicketService tickets;
-    @Autowired
-    FakeMailbox mailbox;
-    @Autowired
-    ScriptedAgents agents;
-    @Autowired
-    EventRecorder events;
-    @Autowired
-    JdbcTemplate jdbc;
+    @Autowired InboxSyncService syncService;
+    @Autowired TicketService tickets;
+    @Autowired FakeMailbox mailbox;
+    @Autowired ScriptedAgents agents;
+    @Autowired EventRecorder events;
+    @Autowired JdbcTemplate jdbc;
 
     @BeforeEach
     void reset() {
@@ -77,7 +71,8 @@ class InboxSyncServiceIT {
 
     @Test
     void createsTicketsSkipsIgnoredAndRetriesFailures() {
-        mailbox.readOnly = true; // labels off: de-duplication relies on the local processed_email table
+        mailbox.readOnly =
+                true; // labels off: de-duplication relies on the local processed_email table
         mailbox.add(Fixtures.email("m1", "Sink leaking"));
         mailbox.add(Fixtures.email("m2", "Code violation notice"));
         mailbox.add(Fixtures.email("m3", "Noisy neighbors"));
@@ -97,10 +92,16 @@ class InboxSyncServiceIT {
         assertThat(first.alreadyKnown()).isZero();
 
         List<TicketSummary> saved = tickets.findAll();
-        assertThat(saved).extracting(TicketSummary::emailId).containsExactlyInAnyOrder("m1", "m2", "m3");
-        assertThat(saved).allMatch(TicketSummary::unread).allMatch(t -> t.status() == TicketStatus.OPEN);
-        TicketSummary leak = saved.stream().filter(t -> t.emailId().equals("m1")).findFirst().orElseThrow();
-        assertThat(leak.details()).isInstanceOf(MaintenanceDetails.class); // sealed type survives the JSON column
+        assertThat(saved)
+                .extracting(TicketSummary::emailId)
+                .containsExactlyInAnyOrder("m1", "m2", "m3");
+        assertThat(saved)
+                .allMatch(TicketSummary::unread)
+                .allMatch(t -> t.status() == TicketStatus.OPEN);
+        TicketSummary leak =
+                saved.stream().filter(t -> t.emailId().equals("m1")).findFirst().orElseThrow();
+        assertThat(leak.details())
+                .isInstanceOf(MaintenanceDetails.class); // sealed type survives the JSON column
         assertThat(leak.propertyAddress()).isEqualTo("12 Oak St");
         assertThat(tickets.rawBody(leak.id())).isEqualTo("Body of Sink leaking");
 
@@ -128,17 +129,22 @@ class InboxSyncServiceIT {
 
         syncService.startSync(SyncTrigger.MANUAL).join();
 
-        assertThat(mailbox.labels).containsOnly(
-                Map.entry("m1", "Maintenance"),
-                Map.entry("m2", FakeMailbox.PROCESSED_ONLY)); // m3 failed: left unlabeled for a retry
+        assertThat(mailbox.labels)
+                .containsOnly(
+                        Map.entry("m1", "Maintenance"),
+                        Map.entry(
+                                "m2",
+                                FakeMailbox
+                                        .PROCESSED_ONLY)); // m3 failed: left unlabeled for a retry
         var second = syncService.startSync(SyncTrigger.MANUAL).join();
         assertThat(second.alreadyKnown()).isZero(); // labeled ones are no longer listed at all
-        assertThat(agents.routeCalls).hasValue(4);  // m1, m2, m3, then only m3 again
+        assertThat(agents.routeCalls).hasValue(4); // m1, m2, m3, then only m3 again
     }
 
     @Test
     void labelsKnownEmailsThatAreStillListed() {
-        // Processed while labeling was off (or a label call failed): known locally, still listed by Gmail.
+        // Processed while labeling was off (or a label call failed): known locally, still listed by
+        // Gmail.
         mailbox.add(Fixtures.email("m1", "Sink leaking"));
         agents.routes.put("m1", routing(Category.MAINTENANCE, Priority.HIGH));
         mailbox.failLabeling = true;
@@ -173,8 +179,12 @@ class InboxSyncServiceIT {
 
         syncService.startSync(SyncTrigger.MANUAL).join();
 
-        assertThat(events.received).hasExactlyElementsOfTypes(
-                SyncEvent.Started.class, SyncEvent.Planned.class, SyncEvent.EmailTriaged.class, SyncEvent.Finished.class);
+        assertThat(events.received)
+                .hasExactlyElementsOfTypes(
+                        SyncEvent.Started.class,
+                        SyncEvent.Planned.class,
+                        SyncEvent.EmailTriaged.class,
+                        SyncEvent.Finished.class);
     }
 
     @Test

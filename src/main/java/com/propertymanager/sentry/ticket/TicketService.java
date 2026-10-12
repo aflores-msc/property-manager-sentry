@@ -1,17 +1,19 @@
 package com.propertymanager.sentry.ticket;
 
+import com.propertymanager.sentry.mail.InboundEmail;
+import com.propertymanager.sentry.triage.TriageOutcome;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
-
-import com.propertymanager.sentry.mail.InboundEmail;
-import com.propertymanager.sentry.triage.TriageOutcome;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** All ticket reads and writes. Everything the UI or the sync needs from the database goes through here. */
+/**
+ * All ticket reads and writes. Everything the UI or the sync needs from the database goes through
+ * here.
+ */
 @Service
 public class TicketService {
 
@@ -19,7 +21,8 @@ public class TicketService {
     private final ProcessedEmailRepository processedEmails;
     private final Clock clock;
 
-    public TicketService(TicketRepository tickets, ProcessedEmailRepository processedEmails, Clock clock) {
+    public TicketService(
+            TicketRepository tickets, ProcessedEmailRepository processedEmails, Clock clock) {
         this.tickets = tickets;
         this.processedEmails = processedEmails;
         this.clock = clock;
@@ -52,16 +55,29 @@ public class TicketService {
         Instant now = clock.instant();
         return switch (outcome) {
             case TriageOutcome.Ticketed(var routing, var details) -> {
-                var ticket = tickets.save(new Ticket(
-                        email.id(), email.receivedAt(), now, email.sender(), email.subject(),
-                        routing.category(), routing.priority(), routing.senderType(),
-                        routing.propertyAddress(), routing.unitNumber(), routing.rationale(),
-                        details, email.body()));
-                processedEmails.save(new ProcessedEmail(email.id(), ProcessedEmail.Outcome.TICKETED, now));
+                var ticket =
+                        tickets.save(
+                                new Ticket(
+                                        email.id(),
+                                        email.receivedAt(),
+                                        now,
+                                        email.sender(),
+                                        email.subject(),
+                                        routing.category(),
+                                        routing.priority(),
+                                        routing.senderType(),
+                                        routing.propertyAddress(),
+                                        routing.unitNumber(),
+                                        routing.rationale(),
+                                        details,
+                                        email.body()));
+                processedEmails.save(
+                        new ProcessedEmail(email.id(), ProcessedEmail.Outcome.TICKETED, now));
                 yield ticket.getId();
             }
             case TriageOutcome.Ignored _ -> {
-                processedEmails.save(new ProcessedEmail(email.id(), ProcessedEmail.Outcome.IGNORED, now));
+                processedEmails.save(
+                        new ProcessedEmail(email.id(), ProcessedEmail.Outcome.IGNORED, now));
                 yield null;
             }
             case TriageOutcome.Failed _ -> null;

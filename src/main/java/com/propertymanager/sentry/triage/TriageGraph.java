@@ -5,9 +5,8 @@ import static org.bsc.langgraph4j.StateGraph.START;
 import static org.bsc.langgraph4j.action.AsyncEdgeAction.edge_async;
 import static org.bsc.langgraph4j.action.AsyncNodeAction.node_async;
 
-import java.util.Map;
-
 import com.propertymanager.sentry.mail.InboundEmail;
+import java.util.Map;
 import org.bsc.langgraph4j.CompiledGraph;
 import org.bsc.langgraph4j.GraphInput;
 import org.bsc.langgraph4j.GraphStateException;
@@ -42,6 +41,8 @@ public class TriageGraph {
     private final CompiledGraph<TriageState> graph;
 
     public TriageGraph(TriageAgents agents) throws GraphStateException {
+        // The graph reads best as one fluent block, so it is kept out of automatic formatting.
+        // spotless:off
         this.graph = new StateGraph<>(TriageState::new)
                 .addNode(SUPERVISOR, node_async(state -> Map.of(
                         TriageState.ROUTING, agents.route(state.email()))))
@@ -61,18 +62,33 @@ public class TriageGraph {
                 .addEdge(CITY_NOTICE, END)
                 .addEdge(DISPUTE, END)
                 .compile();
+        // spotless:on
     }
 
-    /** Runs one email through the graph. Never throws: failures come back as {@link TriageOutcome.Failed}. */
+    /**
+     * Runs one email through the graph. Never throws: failures come back as {@link
+     * TriageOutcome.Failed}.
+     */
     public TriageOutcome triage(InboundEmail email) {
         try {
-            TriageState result = graph.invoke(GraphInput.args(Map.of(TriageState.EMAIL, email)), RunnableConfig.empty())
-                    .orElseThrow(() -> new IllegalStateException("graph produced no final state"));
+            TriageState result =
+                    graph.invoke(
+                                    GraphInput.args(Map.of(TriageState.EMAIL, email)),
+                                    RunnableConfig.empty())
+                            .orElseThrow(
+                                    () ->
+                                            new IllegalStateException(
+                                                    "graph produced no final state"));
             return toOutcome(result);
         } catch (RuntimeException e) {
             Throwable cause = rootCause(e);
-            log.warn("Triage failed for message {} ({}): {}", email.id(), email.subject(), cause.toString());
-            return new TriageOutcome.Failed(cause.getClass().getSimpleName() + ": " + cause.getMessage());
+            log.warn(
+                    "Triage failed for message {} ({}): {}",
+                    email.id(),
+                    email.subject(),
+                    cause.toString());
+            return new TriageOutcome.Failed(
+                    cause.getClass().getSimpleName() + ": " + cause.getMessage());
         }
     }
 
@@ -97,10 +113,15 @@ public class TriageGraph {
     }
 
     private static RoutingDecision routingOf(TriageState state) {
-        RoutingDecision routing = state.routing()
-                .orElseThrow(() -> new IllegalStateException("supervisor produced no routing decision"));
+        RoutingDecision routing =
+                state.routing()
+                        .orElseThrow(
+                                () ->
+                                        new IllegalStateException(
+                                                "supervisor produced no routing decision"));
         if (routing.category() == null || routing.priority() == null) {
-            throw new IllegalStateException("supervisor returned an incomplete routing decision: " + routing);
+            throw new IllegalStateException(
+                    "supervisor returned an incomplete routing decision: " + routing);
         }
         return routing;
     }

@@ -8,8 +8,7 @@ import javafx.scene.control.Label;
 /** Small colored labels for category, priority and status (styled in {@code sentry.css}). */
 final class Pills {
 
-    private Pills() {
-    }
+    private Pills() {}
 
     static Label of(Category category) {
         return pill(category.label(), "category-" + cssName(category));

@@ -1,9 +1,9 @@
 package com.propertymanager.sentry.triage;
 
 /**
- * Urgency of a ticket. Declared from least to most severe, so the natural enum order
- * ({@link #compareTo}) is the severity order. That's what makes the table sort
- * logically instead of alphabetically.
+ * Urgency of a ticket. Declared from least to most severe, so the natural enum order ({@link
+ * #compareTo}) is the severity order. That's what makes the table sort logically instead of
+ * alphabetically.
  */
 public enum Priority {
     LOW("Low"),

@@ -1,14 +1,5 @@
 package com.propertymanager.sentry.ui;
 
-import java.nio.file.Path;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
-import java.util.List;
-import java.util.Locale;
-import java.util.Objects;
-import java.util.function.Function;
-import java.util.stream.Stream;
-
 import atlantafx.base.controls.Spacer;
 import atlantafx.base.theme.PrimerDark;
 import atlantafx.base.theme.PrimerLight;
@@ -28,6 +19,14 @@ import com.propertymanager.sentry.ticket.TicketSummary;
 import com.propertymanager.sentry.triage.Category;
 import com.propertymanager.sentry.triage.Priority;
 import com.propertymanager.sentry.triage.TriageOutcome;
+import java.nio.file.Path;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
+import java.util.function.Function;
+import java.util.stream.Stream;
 import javafx.application.Application;
 import javafx.application.HostServices;
 import javafx.application.Platform;
@@ -64,15 +63,15 @@ import javafx.util.StringConverter;
 /**
  * The dashboard: a sortable, filterable ticket table, a detail panel and a status bar.
  *
- * <p>Not a singleton bean: {@code SentryFxApplication} builds it with Spring's
- * {@code createBean} (so the constructor is still autowired) only once JavaFX is running. That
- * keeps the Spring context free of UI and lets tests start it without a display. Sync events
- * arrive on background threads, so {@link #onSyncEvent} hops to the JavaFX thread with
- * {@link Platform#runLater}.
+ * <p>Not a singleton bean: {@code SentryFxApplication} builds it with Spring's {@code createBean}
+ * (so the constructor is still autowired) only once JavaFX is running. That keeps the Spring
+ * context free of UI and lets tests start it without a display. Sync events arrive on background
+ * threads, so {@link #onSyncEvent} hops to the JavaFX thread with {@link Platform#runLater}.
  */
 public class MainWindow {
 
-    private static final DateTimeFormatter RECEIVED = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm").withZone(ZoneId.systemDefault());
+    private static final DateTimeFormatter RECEIVED =
+            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm").withZone(ZoneId.systemDefault());
     private static final PseudoClass UNREAD = PseudoClass.getPseudoClass("unread");
 
     private final TicketService tickets;
@@ -82,8 +81,10 @@ public class MainWindow {
     private final UserPreferences preferences;
     private final MailboxClient mailbox;
 
-    // The extractor makes the list fire "updated" events when a row's unread/status property changes.
-    private final ObservableList<TicketRow> allTickets = FXCollections.observableArrayList(TicketRow::observables);
+    // The extractor makes the list fire "updated" events when a row's unread/status property
+    // changes.
+    private final ObservableList<TicketRow> allTickets =
+            FXCollections.observableArrayList(TicketRow::observables);
     private final FilteredList<TicketRow> visibleTickets = new FilteredList<>(allTickets);
     private final TableView<TicketRow> table = new TableView<>();
     private final TextField search = new TextField();
@@ -92,13 +93,19 @@ public class MainWindow {
     private final ProgressBar progress = new ProgressBar();
     private final Label statusText = new Label("Ready");
     private final Label countsText = new Label();
-    private final TicketDetailPane detailPane = new TicketDetailPane(this::changeStatus, this::showOriginal);
+    private final TicketDetailPane detailPane =
+            new TicketDetailPane(this::changeStatus, this::showOriginal);
     private Stage stage;
     private HostServices hostServices;
     private AuthorizationDialog authorizationDialog;
 
-    public MainWindow(TicketService tickets, InboxSyncService syncService, AutoSyncScheduler autoSync,
-                      TicketCsvExporter csvExporter, UserPreferences preferences, MailboxClient mailbox) {
+    public MainWindow(
+            TicketService tickets,
+            InboxSyncService syncService,
+            AutoSyncScheduler autoSync,
+            TicketCsvExporter csvExporter,
+            UserPreferences preferences,
+            MailboxClient mailbox) {
         this.tickets = tickets;
         this.syncService = syncService;
         this.autoSync = autoSync;
@@ -115,8 +122,15 @@ public class MainWindow {
         var root = new BorderPane(body(), header(), null, statusBar(), null);
         // Default to a roomy window, but never larger than the screen it opens on.
         var screen = Screen.getPrimary().getVisualBounds();
-        var scene = new Scene(root, Math.min(1440, screen.getWidth() * 0.95), Math.min(880, screen.getHeight() * 0.95));
-        scene.getStylesheets().add(Objects.requireNonNull(getClass().getResource("/ui/sentry.css")).toExternalForm());
+        var scene =
+                new Scene(
+                        root,
+                        Math.min(1440, screen.getWidth() * 0.95),
+                        Math.min(880, screen.getHeight() * 0.95));
+        scene.getStylesheets()
+                .add(
+                        Objects.requireNonNull(getClass().getResource("/ui/sentry.css"))
+                                .toExternalForm());
 
         stage.setTitle("Property Manager Sentry");
         stage.setMinWidth(980);
@@ -140,8 +154,11 @@ public class MainWindow {
         search.textProperty().addListener((_, _, _) -> applyFilter());
 
         categoryFilter.getItems().add(null);
-        categoryFilter.getItems().addAll(Category.MAINTENANCE, Category.CITY_NOTICE, Category.TENANT_DISPUTE);
-        categoryFilter.setConverter(labelConverter(category -> category == null ? "All categories" : category.label()));
+        categoryFilter
+                .getItems()
+                .addAll(Category.MAINTENANCE, Category.CITY_NOTICE, Category.TENANT_DISPUTE);
+        categoryFilter.setConverter(
+                labelConverter(category -> category == null ? "All categories" : category.label()));
         categoryFilter.setValue(null);
         categoryFilter.valueProperty().addListener((_, _, _) -> applyFilter());
 
@@ -157,12 +174,24 @@ public class MainWindow {
 
         var theme = new ToggleButton("Dark mode");
         theme.setSelected(preferences.darkTheme());
-        theme.selectedProperty().addListener((_, _, dark) -> {
-            preferences.setDarkTheme(dark);
-            applyTheme(dark);
-        });
+        theme.selectedProperty()
+                .addListener(
+                        (_, _, dark) -> {
+                            preferences.setDarkTheme(dark);
+                            applyTheme(dark);
+                        });
 
-        var header = new HBox(10, titles, new Spacer(), search, categoryFilter, theme, settings, export, syncButton);
+        var header =
+                new HBox(
+                        10,
+                        titles,
+                        new Spacer(),
+                        search,
+                        categoryFilter,
+                        theme,
+                        settings,
+                        export,
+                        syncButton);
         header.setAlignment(Pos.CENTER_LEFT);
         header.setPadding(new Insets(14, 18, 14, 18));
         header.getStyleClass().add("app-header");
@@ -207,26 +236,37 @@ public class MainWindow {
         status.setPrefWidth(105);
         status.setMinWidth(105);
         status.setCellFactory(_ -> graphicCell(Pills::of));
-        var property = column("Property", ticket -> Objects.requireNonNullElse(ticket.propertyAddress(), ""), 220);
+        var property =
+                column(
+                        "Property",
+                        ticket -> Objects.requireNonNullElse(ticket.propertyAddress(), ""),
+                        220);
 
         table.getColumns().setAll(List.of(received, subject, category, priority, status, property));
         table.getSortOrder().add(received);
         table.getStyleClass().addAll(Styles.STRIPED, Tweaks.EDGE_TO_EDGE);
         table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
-        table.setPlaceholder(new Label("No tickets yet. Click \"Sync inbox\" to triage your unread mail."));
+        table.setPlaceholder(
+                new Label("No tickets yet. Click \"Sync inbox\" to triage your unread mail."));
 
         var sorted = new SortedList<>(visibleTickets);
         sorted.comparatorProperty().bind(table.comparatorProperty());
         table.setItems(sorted);
 
-        table.setRowFactory(_ -> new TableRow<>() {
-            @Override
-            protected void updateItem(TicketRow row, boolean empty) {
-                super.updateItem(row, empty);
-                pseudoClassStateChanged(UNREAD, !empty && row != null && row.unreadProperty().get());
-            }
-        });
-        table.getSelectionModel().selectedItemProperty().addListener((_, _, ticket) -> onSelected(ticket));
+        table.setRowFactory(
+                _ ->
+                        new TableRow<>() {
+                            @Override
+                            protected void updateItem(TicketRow row, boolean empty) {
+                                super.updateItem(row, empty);
+                                pseudoClassStateChanged(
+                                        UNREAD,
+                                        !empty && row != null && row.unreadProperty().get());
+                            }
+                        });
+        table.getSelectionModel()
+                .selectedItemProperty()
+                .addListener((_, _, ticket) -> onSelected(ticket));
     }
 
     // ---- behavior --------------------------------------------------------------------------
@@ -234,7 +274,8 @@ public class MainWindow {
     private void onSelected(TicketRow row) {
         detailPane.show(row);
         if (row != null && row.unreadProperty().get()) {
-            // Opening a ticket marks it read, in the database too, so it stays read after a restart.
+            // Opening a ticket marks it read, in the database too, so it stays read after a
+            // restart.
             row.unreadProperty().set(false);
             Fx.background(() -> tickets.markRead(row.id()), this::showError);
             updateCounts();
@@ -248,48 +289,67 @@ public class MainWindow {
     }
 
     private void showOriginal(TicketRow row) {
-        Fx.background(() -> tickets.rawBody(row.id()),
+        Fx.background(
+                () -> tickets.rawBody(row.id()),
                 body -> new RawEmailDialog(stage, row.ticket().subject(), body).show(),
                 this::showError);
     }
 
     private void reloadTickets() {
-        Fx.background(tickets::findAll, loaded -> {
-            Long selectedId = table.getSelectionModel().getSelectedItem() == null
-                    ? null : table.getSelectionModel().getSelectedItem().id();
-            allTickets.setAll(loaded.stream().map(TicketRow::new).toList());
-            if (selectedId != null) {
-                allTickets.stream().filter(t -> t.id() == selectedId).findFirst()
-                        .ifPresent(t -> table.getSelectionModel().select(t));
-            }
-            table.sort();
-            updateCounts();
-        }, this::showError);
+        Fx.background(
+                tickets::findAll,
+                loaded -> {
+                    Long selectedId =
+                            table.getSelectionModel().getSelectedItem() == null
+                                    ? null
+                                    : table.getSelectionModel().getSelectedItem().id();
+                    allTickets.setAll(loaded.stream().map(TicketRow::new).toList());
+                    if (selectedId != null) {
+                        allTickets.stream()
+                                .filter(t -> t.id() == selectedId)
+                                .findFirst()
+                                .ifPresent(t -> table.getSelectionModel().select(t));
+                    }
+                    table.sort();
+                    updateCounts();
+                },
+                this::showError);
     }
 
     private void applyFilter() {
-        String query = search.getText() == null ? "" : search.getText().strip().toLowerCase(Locale.ROOT);
+        String query =
+                search.getText() == null ? "" : search.getText().strip().toLowerCase(Locale.ROOT);
         Category category = categoryFilter.getValue();
-        visibleTickets.setPredicate(row ->
-                (category == null || row.ticket().category() == category)
-                        && (query.isEmpty() || matches(row.ticket(), query)));
+        visibleTickets.setPredicate(
+                row ->
+                        (category == null || row.ticket().category() == category)
+                                && (query.isEmpty() || matches(row.ticket(), query)));
         updateCounts();
     }
 
     private static boolean matches(TicketSummary ticket, String query) {
-        return Stream.of(ticket.subject(), ticket.sender(), ticket.propertyAddress(), ticket.unitNumber())
+        return Stream.of(
+                        ticket.subject(),
+                        ticket.sender(),
+                        ticket.propertyAddress(),
+                        ticket.unitNumber())
                 .filter(Objects::nonNull)
                 .anyMatch(text -> text.toLowerCase(Locale.ROOT).contains(query));
     }
 
     private void updateCounts() {
         long unread = allTickets.stream().filter(row -> row.unreadProperty().get()).count();
-        long urgent = allTickets.stream()
-                .filter(row -> row.ticket().priority() == Priority.URGENT
-                        && row.statusProperty().get() != TicketStatus.RESOLVED)
-                .count();
-        countsText.setText("%d of %d tickets  ·  %d unread  ·  %d urgent unresolved"
-                .formatted(visibleTickets.size(), allTickets.size(), unread, urgent));
+        long urgent =
+                allTickets.stream()
+                        .filter(
+                                row ->
+                                        row.ticket().priority() == Priority.URGENT
+                                                && row.statusProperty().get()
+                                                        != TicketStatus.RESOLVED)
+                        .count();
+        countsText.setText(
+                "%d of %d tickets  ·  %d unread  ·  %d urgent unresolved"
+                        .formatted(visibleTickets.size(), allTickets.size(), unread, urgent));
     }
 
     private void exportCsv() {
@@ -308,23 +368,33 @@ public class MainWindow {
         // Exports what is on screen: current filter, sort order and status edits.
         List<TicketSummary> snapshot = table.getItems().stream().map(TicketRow::snapshot).toList();
         Path target = file.toPath();
-        Fx.background(() -> {
-            csvExporter.export(snapshot, target);
-            return snapshot.size();
-        }, count -> statusText.setText("Exported %d ticket(s) to %s".formatted(count, target)), this::showError);
+        Fx.background(
+                () -> {
+                    csvExporter.export(snapshot, target);
+                    return snapshot.size();
+                },
+                count -> statusText.setText("Exported %d ticket(s) to %s".formatted(count, target)),
+                this::showError);
     }
 
     private void openSettings() {
-        new SettingsDialog(stage, preferences.autoSyncMinutes()).showAndWait().ifPresent(minutes -> {
-            autoSync.reschedule(minutes);
-            statusText.setText(minutes == 0 ? "Automatic sync off" : "Automatic sync every %d min".formatted(minutes));
-        });
+        new SettingsDialog(stage, preferences.autoSyncMinutes())
+                .showAndWait()
+                .ifPresent(
+                        minutes -> {
+                            autoSync.reschedule(minutes);
+                            statusText.setText(
+                                    minutes == 0
+                                            ? "Automatic sync off"
+                                            : "Automatic sync every %d min".formatted(minutes));
+                        });
     }
 
     private static void applyTheme(boolean dark) {
-        Application.setUserAgentStylesheet(dark
-                ? new PrimerDark().getUserAgentStylesheet()
-                : new PrimerLight().getUserAgentStylesheet());
+        Application.setUserAgentStylesheet(
+                dark
+                        ? new PrimerDark().getUserAgentStylesheet()
+                        : new PrimerLight().getUserAgentStylesheet());
     }
 
     // ---- sync events (background threads) ----------------------------------------------------
@@ -339,17 +409,26 @@ public class MainWindow {
                 syncButton.setDisable(true);
                 progress.setVisible(true);
                 progress.setProgress(ProgressBar.INDETERMINATE_PROGRESS);
-                statusText.setText(trigger == SyncTrigger.SCHEDULED ? "Automatic sync: checking Gmail…" : "Checking Gmail…");
+                statusText.setText(
+                        trigger == SyncTrigger.SCHEDULED
+                                ? "Automatic sync: checking Gmail…"
+                                : "Checking Gmail…");
             }
             case SyncEvent.Planned(var candidates, var known, var toProcess) -> {
                 progress.setProgress(toProcess == 0 ? 1 : 0);
-                statusText.setText(toProcess == 0
-                        ? "No new emails (%d already processed)".formatted(known)
-                        : "Triaging %d new email(s)…".formatted(toProcess));
+                statusText.setText(
+                        toProcess == 0
+                                ? "No new emails (%d already processed)".formatted(known)
+                                : "Triaging %d new email(s)…".formatted(toProcess));
             }
             case SyncEvent.EmailTriaged triaged -> {
                 progress.setProgress((double) triaged.completed() / triaged.total());
-                statusText.setText("Triaged %d / %d: %s".formatted(triaged.completed(), triaged.total(), describe(triaged.outcome())));
+                statusText.setText(
+                        "Triaged %d / %d: %s"
+                                .formatted(
+                                        triaged.completed(),
+                                        triaged.total(),
+                                        describe(triaged.outcome())));
                 if (triaged.ticketId() != null) {
                     reloadTickets();
                 }
@@ -357,8 +436,13 @@ public class MainWindow {
             case SyncEvent.Finished(var summary) -> {
                 syncButton.setDisable(false);
                 progress.setVisible(false);
-                var text = new StringBuilder("Sync done in %ds: %d new ticket(s), %d ignored"
-                        .formatted(summary.elapsed().toSeconds(), summary.ticketed(), summary.ignored()));
+                var text =
+                        new StringBuilder(
+                                "Sync done in %ds: %d new ticket(s), %d ignored"
+                                        .formatted(
+                                                summary.elapsed().toSeconds(),
+                                                summary.ticketed(),
+                                                summary.ignored()));
                 if (summary.failed() > 0) {
                     text.append(", %d failed (will retry next sync)".formatted(summary.failed()));
                 }
@@ -377,31 +461,42 @@ public class MainWindow {
     // ---- Gmail authorization (background threads) ---------------------------------------------
 
     public void onAuthorizationEvent(MailboxAuthorizationEvent event) {
-        Platform.runLater(() -> {
-            switch (event) {
-                case MailboxAuthorizationEvent.Required(var url) -> {
-                    statusText.setText("Waiting for you to allow Gmail access in your browser…");
-                    hostServices.showDocument(url);
-                    if (authorizationDialog != null) {
-                        authorizationDialog.close();
+        Platform.runLater(
+                () -> {
+                    switch (event) {
+                        case MailboxAuthorizationEvent.Required(var url) -> {
+                            statusText.setText(
+                                    "Waiting for you to allow Gmail access in your browser…");
+                            hostServices.showDocument(url);
+                            if (authorizationDialog != null) {
+                                authorizationDialog.close();
+                            }
+                            authorizationDialog =
+                                    new AuthorizationDialog(
+                                            stage,
+                                            url,
+                                            hostServices::showDocument,
+                                            mailbox::cancelAuthorization);
+                            authorizationDialog.show();
+                        }
+                        case MailboxAuthorizationEvent.Finished(var granted) -> {
+                            if (authorizationDialog != null) {
+                                authorizationDialog.close();
+                                authorizationDialog = null;
+                            }
+                            statusText.setText(
+                                    granted
+                                            ? "Gmail connected. Checking inbox…"
+                                            : "Gmail access not granted");
+                        }
                     }
-                    authorizationDialog = new AuthorizationDialog(stage, url, hostServices::showDocument, mailbox::cancelAuthorization);
-                    authorizationDialog.show();
-                }
-                case MailboxAuthorizationEvent.Finished(var granted) -> {
-                    if (authorizationDialog != null) {
-                        authorizationDialog.close();
-                        authorizationDialog = null;
-                    }
-                    statusText.setText(granted ? "Gmail connected. Checking inbox…" : "Gmail access not granted");
-                }
-            }
-        });
+                });
     }
 
     private static String describe(TriageOutcome outcome) {
         return switch (outcome) {
-            case TriageOutcome.Ticketed(var routing, _) -> routing.category().label() + " · " + routing.priority().label();
+            case TriageOutcome.Ticketed(var routing, _) ->
+                    routing.category().label() + " · " + routing.priority().label();
             case TriageOutcome.Ignored _ -> "ignored (not property related)";
             case TriageOutcome.Failed(var reason) -> "failed: " + reason;
         };
@@ -409,9 +504,11 @@ public class MainWindow {
 
     // ---- small helpers -------------------------------------------------------------------------
 
-    private static <T> TableColumn<TicketRow, T> column(String title, Function<TicketSummary, T> value, double width) {
+    private static <T> TableColumn<TicketRow, T> column(
+            String title, Function<TicketSummary, T> value, double width) {
         var column = new TableColumn<TicketRow, T>(title);
-        column.setCellValueFactory(cell -> new ReadOnlyObjectWrapper<>(value.apply(cell.getValue().ticket())));
+        column.setCellValueFactory(
+                cell -> new ReadOnlyObjectWrapper<>(value.apply(cell.getValue().ticket())));
         column.setPrefWidth(width);
         return column;
     }

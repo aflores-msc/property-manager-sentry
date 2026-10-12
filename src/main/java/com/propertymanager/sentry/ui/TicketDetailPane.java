@@ -1,11 +1,5 @@
 package com.propertymanager.sentry.ui;
 
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
-import java.util.Optional;
-import java.util.function.BiConsumer;
-import java.util.function.Consumer;
-
 import atlantafx.base.controls.Message;
 import atlantafx.base.controls.Spacer;
 import atlantafx.base.theme.Styles;
@@ -16,6 +10,11 @@ import com.propertymanager.sentry.triage.CityNoticeDetails;
 import com.propertymanager.sentry.triage.DisputeDetails;
 import com.propertymanager.sentry.triage.MaintenanceDetails;
 import com.propertymanager.sentry.triage.TicketDetails;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.Optional;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
@@ -36,13 +35,16 @@ import javafx.util.StringConverter;
 /** Right-hand panel: everything known about the selected ticket. */
 final class TicketDetailPane extends ScrollPane {
 
-    private static final DateTimeFormatter RECEIVED = DateTimeFormatter.ofPattern("EEE d MMM yyyy, HH:mm").withZone(ZoneId.systemDefault());
+    private static final DateTimeFormatter RECEIVED =
+            DateTimeFormatter.ofPattern("EEE d MMM yyyy, HH:mm").withZone(ZoneId.systemDefault());
 
     private final VBox content = new VBox(14);
     private final BiConsumer<TicketRow, TicketStatus> onStatusChange;
     private final Consumer<TicketRow> onViewOriginal;
 
-    TicketDetailPane(BiConsumer<TicketRow, TicketStatus> onStatusChange, Consumer<TicketRow> onViewOriginal) {
+    TicketDetailPane(
+            BiConsumer<TicketRow, TicketStatus> onStatusChange,
+            Consumer<TicketRow> onViewOriginal) {
         this.onStatusChange = onStatusChange;
         this.onViewOriginal = onViewOriginal;
         content.setPadding(new Insets(20));
@@ -79,15 +81,22 @@ final class TicketDetailPane extends ScrollPane {
             content.getChildren().add(paragraph(ticket.details().summary()));
         }
 
-        content.getChildren().addAll(new Separator(), sectionTitle("Property"), grid(
-                row("Address", ticket.propertyAddress()),
-                row("Unit", ticket.unitNumber()),
-                row("Sender type", ticket.senderType())));
+        content.getChildren()
+                .addAll(
+                        new Separator(),
+                        sectionTitle("Property"),
+                        grid(
+                                row("Address", ticket.propertyAddress()),
+                                row("Unit", ticket.unitNumber()),
+                                row("Sender type", ticket.senderType())));
 
-        content.getChildren().addAll(sectionTitle(ticket.category().label() + " details"),
-                grid(TicketFields.of(ticket.details()).entrySet().stream()
-                        .map(field -> row(field.getKey(), field.getValue()))
-                        .toArray(Node[][]::new)));
+        content.getChildren()
+                .addAll(
+                        sectionTitle(ticket.category().label() + " details"),
+                        grid(
+                                TicketFields.of(ticket.details()).entrySet().stream()
+                                        .map(field -> row(field.getKey(), field.getValue()))
+                                        .toArray(Node[][]::new)));
 
         if (ticket.rationale() != null && !ticket.rationale().isBlank()) {
             var why = paragraph("Why: " + ticket.rationale());
@@ -100,19 +109,26 @@ final class TicketDetailPane extends ScrollPane {
 
     /** Highlights that deserve attention, chosen by pattern matching on the sealed details type. */
     private static Optional<Node> callout(TicketDetails details) {
-        Message message = switch (details) {
-            case MaintenanceDetails m when m.safetyRisk() ->
-                    new Message("Safety risk", "The report suggests a risk to people or property. Act quickly.");
-            case DisputeDetails d when d.escalationNeeded() ->
-                    new Message("Escalation recommended", "Management or legal involvement may be needed.");
-            case CityNoticeDetails c when !c.deadline().isBlank() ->
-                    new Message("Deadline " + c.deadline(), c.requiredAction());
-            case null, default -> null;
-        };
+        Message message =
+                switch (details) {
+                    case MaintenanceDetails m when m.safetyRisk() ->
+                            new Message(
+                                    "Safety risk",
+                                    "The report suggests a risk to people or property. Act"
+                                            + " quickly.");
+                    case DisputeDetails d when d.escalationNeeded() ->
+                            new Message(
+                                    "Escalation recommended",
+                                    "Management or legal involvement may be needed.");
+                    case CityNoticeDetails c when !c.deadline().isBlank() ->
+                            new Message("Deadline " + c.deadline(), c.requiredAction());
+                    case null, default -> null;
+                };
         if (message == null) {
             return Optional.empty();
         }
-        message.getStyleClass().add(details instanceof CityNoticeDetails ? Styles.WARNING : Styles.DANGER);
+        message.getStyleClass()
+                .add(details instanceof CityNoticeDetails ? Styles.WARNING : Styles.DANGER);
         return Optional.of(message);
     }
 
@@ -120,22 +136,25 @@ final class TicketDetailPane extends ScrollPane {
         var status = new ComboBox<TicketStatus>();
         status.getItems().setAll(TicketStatus.values());
         status.setValue(row.statusProperty().get());
-        status.setConverter(new StringConverter<>() {
-            @Override
-            public String toString(TicketStatus value) {
-                return value == null ? "" : value.label();
-            }
+        status.setConverter(
+                new StringConverter<>() {
+                    @Override
+                    public String toString(TicketStatus value) {
+                        return value == null ? "" : value.label();
+                    }
 
-            @Override
-            public TicketStatus fromString(String text) {
-                throw new UnsupportedOperationException();
-            }
-        });
-        status.valueProperty().addListener((_, old, now) -> {
-            if (now != null && now != old) {
-                onStatusChange.accept(row, now);
-            }
-        });
+                    @Override
+                    public TicketStatus fromString(String text) {
+                        throw new UnsupportedOperationException();
+                    }
+                });
+        status.valueProperty()
+                .addListener(
+                        (_, old, now) -> {
+                            if (now != null && now != old) {
+                                onStatusChange.accept(row, now);
+                            }
+                        });
 
         var viewOriginal = new Button("View original email");
         viewOriginal.getStyleClass().add(Styles.BUTTON_OUTLINED);

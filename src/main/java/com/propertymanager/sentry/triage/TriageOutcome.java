@@ -14,13 +14,11 @@ public sealed interface TriageOutcome {
     }
 
     /** Not property-management mail. Remembered so it isn't re-classified, but never shown. */
-    record Ignored(RoutingDecision routing) implements TriageOutcome {
-    }
+    record Ignored(RoutingDecision routing) implements TriageOutcome {}
 
     /**
      * Any step failed (model error, timeout, invalid output). Not remembered, so the email is
      * retried on the next sync instead of being stored half-processed.
      */
-    record Failed(String reason) implements TriageOutcome {
-    }
+    record Failed(String reason) implements TriageOutcome {}
 }

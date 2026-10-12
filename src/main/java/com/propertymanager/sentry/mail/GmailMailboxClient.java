@@ -1,20 +1,5 @@
 package com.propertymanager.sentry.mail;
 
-import java.io.IOException;
-import java.io.Reader;
-import java.nio.file.Files;
-import java.nio.file.NoSuchFileException;
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-
 import com.google.api.client.auth.oauth2.Credential;
 import com.google.api.client.extensions.java6.auth.oauth2.AuthorizationCodeInstalledApp;
 import com.google.api.client.extensions.jetty.auth.oauth2.LocalServerReceiver;
@@ -31,6 +16,20 @@ import com.google.api.services.gmail.model.Label;
 import com.google.api.services.gmail.model.Message;
 import com.google.api.services.gmail.model.MessagePartHeader;
 import com.propertymanager.sentry.config.SentryProperties;
+import java.io.IOException;
+import java.io.Reader;
+import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,17 +37,17 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 
 /**
- * Gmail access through the official Java client, authorized with the OAuth2 "installed app"
- * flow: the first call opens the browser for consent, then the refresh token is kept in
- * {@code sentry.gmail.tokens-dir} for every later run.
+ * Gmail access through the official Java client, authorized with the OAuth2 "installed app" flow:
+ * the first call opens the browser for consent, then the refresh token is kept in {@code
+ * sentry.gmail.tokens-dir} for every later run.
  *
- * <p>With {@code sentry.gmail.labels.enabled} (the default) the app asks for the
- * {@code gmail.modify} scope and labels every triaged message, e.g. {@code Sentry/Processed} and
- * {@code Sentry/Maintenance}. The search query excludes {@code Sentry/Processed}, so Gmail only
- * returns mail the app hasn't seen. Labels are the only change the app makes: it never marks
- * messages read, moves, deletes or sends anything. With labels disabled it requests only
- * {@code gmail.readonly}, and de-duplication relies on the local {@code processed_email} table alone
- * (which is kept either way as a safety net).
+ * <p>With {@code sentry.gmail.labels.enabled} (the default) the app asks for the {@code
+ * gmail.modify} scope and labels every triaged message, e.g. {@code Sentry/Processed} and {@code
+ * Sentry/Maintenance}. The search query excludes {@code Sentry/Processed}, so Gmail only returns
+ * mail the app hasn't seen. Labels are the only change the app makes: it never marks messages read,
+ * moves, deletes or sends anything. With labels disabled it requests only {@code gmail.readonly},
+ * and de-duplication relies on the local {@code processed_email} table alone (which is kept either
+ * way as a safety net).
  */
 @Component
 public class GmailMailboxClient implements MailboxClient {
@@ -57,8 +56,10 @@ public class GmailMailboxClient implements MailboxClient {
     private static final JsonFactory JSON = GsonFactory.getDefaultInstance();
     private static final String USER = "me";
     private static final String PROCESSED = "Processed";
+
     /** Gmail's limit for ids in one batchModify call. */
     private static final int BATCH_LIMIT = 1000;
+
     /** How long to wait for the user to approve access in the browser. */
     private static final long AUTHORIZATION_TIMEOUT_MINUTES = 5;
 
@@ -66,11 +67,18 @@ public class GmailMailboxClient implements MailboxClient {
     private final ApplicationEventPublisher events;
     // Plain JDK HTTP transport: honors the JVM's trust store and proxy settings.
     private final NetHttpTransport transport = new NetHttpTransport();
-    /** Label name (lower case: Gmail names are case-insensitive) to label id. Guarded by {@code this}. */
+
+    /**
+     * Label name (lower case: Gmail names are case-insensitive) to label id. Guarded by {@code
+     * this}.
+     */
     private final Map<String, String> labelIds = new HashMap<>();
+
     private volatile Gmail gmail;
+
     /** Set while waiting for the user to approve access in the browser. */
     private volatile LocalServerReceiver pendingAuthorization;
+
     private volatile boolean authorizationCancelled;
 
     @Autowired
@@ -81,7 +89,7 @@ public class GmailMailboxClient implements MailboxClient {
 
     /** For tests: use a ready-made Gmail client instead of running the OAuth flow. */
     GmailMailboxClient(SentryProperties properties, Gmail gmail) {
-        this(properties, _ -> { });
+        this(properties, _ -> {});
         this.gmail = gmail;
     }
 
@@ -99,11 +107,15 @@ public class GmailMailboxClient implements MailboxClient {
         var ids = new ArrayList<String>();
         String pageToken = null;
         do {
-            var response = client().users().messages().list(USER)
-                    .setQ(effectiveQuery())
-                    .setMaxResults((long) Math.min(100, settings.maxMessages() - ids.size()))
-                    .setPageToken(pageToken)
-                    .execute();
+            var response =
+                    client().users()
+                            .messages()
+                            .list(USER)
+                            .setQ(effectiveQuery())
+                            .setMaxResults(
+                                    (long) Math.min(100, settings.maxMessages() - ids.size()))
+                            .setPageToken(pageToken)
+                            .execute();
             if (response.getMessages() != null) {
                 response.getMessages().forEach(message -> ids.add(message.getId()));
             }
@@ -114,10 +126,19 @@ public class GmailMailboxClient implements MailboxClient {
 
     @Override
     public InboundEmail fetch(String messageId) throws IOException {
-        Message message = client().users().messages().get(USER, messageId).setFormat("full").execute();
-        Map<String, String> headers = message.getPayload().getHeaders().stream()
-                .collect(Collectors.toMap(h -> h.getName().toLowerCase(Locale.ROOT), MessagePartHeader::getValue, (first, second) -> first));
-        Instant receivedAt = message.getInternalDate() != null ? Instant.ofEpochMilli(message.getInternalDate()) : null;
+        Message message =
+                client().users().messages().get(USER, messageId).setFormat("full").execute();
+        Map<String, String> headers =
+                message.getPayload().getHeaders().stream()
+                        .collect(
+                                Collectors.toMap(
+                                        h -> h.getName().toLowerCase(Locale.ROOT),
+                                        MessagePartHeader::getValue,
+                                        (first, second) -> first));
+        Instant receivedAt =
+                message.getInternalDate() != null
+                        ? Instant.ofEpochMilli(message.getInternalDate())
+                        : null;
         return new InboundEmail(
                 message.getId(),
                 headers.get("from"),
@@ -138,9 +159,10 @@ public class GmailMailboxClient implements MailboxClient {
         }
         List<String> ids = List.copyOf(messageIds);
         for (int from = 0; from < ids.size(); from += BATCH_LIMIT) {
-            var request = new BatchModifyMessagesRequest()
-                    .setIds(ids.subList(from, Math.min(ids.size(), from + BATCH_LIMIT)))
-                    .setAddLabelIds(addLabelIds);
+            var request =
+                    new BatchModifyMessagesRequest()
+                            .setIds(ids.subList(from, Math.min(ids.size(), from + BATCH_LIMIT)))
+                            .setAddLabelIds(addLabelIds);
             client().users().messages().batchModify(USER, request).execute();
         }
     }
@@ -170,7 +192,10 @@ public class GmailMailboxClient implements MailboxClient {
         if (labelIds.isEmpty()) {
             var existing = client().users().labels().list(USER).execute().getLabels();
             if (existing != null) {
-                existing.forEach(label -> labelIds.put(label.getName().toLowerCase(Locale.ROOT), label.getId()));
+                existing.forEach(
+                        label ->
+                                labelIds.put(
+                                        label.getName().toLowerCase(Locale.ROOT), label.getId()));
             }
         }
         String id = labelIds.get(name.toLowerCase(Locale.ROOT));
@@ -179,13 +204,20 @@ public class GmailMailboxClient implements MailboxClient {
         }
         int slash = name.lastIndexOf('/');
         if (slash > 0) {
-            labelId(name.substring(0, slash)); // Gmail shows "A/B" nested under "A" only if "A" exists
+            labelId(
+                    name.substring(
+                            0, slash)); // Gmail shows "A/B" nested under "A" only if "A" exists
         }
-        var created = client().users().labels().create(USER, new Label()
-                        .setName(name)
-                        .setLabelListVisibility("labelShow")
-                        .setMessageListVisibility("show"))
-                .execute();
+        var created =
+                client().users()
+                        .labels()
+                        .create(
+                                USER,
+                                new Label()
+                                        .setName(name)
+                                        .setLabelListVisibility("labelShow")
+                                        .setMessageListVisibility("show"))
+                        .execute();
         log.info("Created Gmail label {}", name);
         labelIds.put(name.toLowerCase(Locale.ROOT), created.getId());
         return created.getId();
@@ -196,9 +228,10 @@ public class GmailMailboxClient implements MailboxClient {
         if (current == null) {
             synchronized (this) {
                 if (gmail == null) {
-                    gmail = new Gmail.Builder(transport, JSON, authorize())
-                            .setApplicationName(settings.applicationName())
-                            .build();
+                    gmail =
+                            new Gmail.Builder(transport, JSON, authorize())
+                                    .setApplicationName(settings.applicationName())
+                                    .build();
                 }
                 current = gmail;
             }
@@ -211,50 +244,67 @@ public class GmailMailboxClient implements MailboxClient {
         try (Reader reader = Files.newBufferedReader(settings.credentialsFile())) {
             secrets = GoogleClientSecrets.load(JSON, reader);
         } catch (NoSuchFileException missing) {
-            throw new MailboxSetupException("""
+            throw new MailboxSetupException(
+                    """
                     Gmail OAuth client file not found at %s.
                     Create an OAuth client ID of type "Desktop app" in Google Cloud Console \
-                    (with the Gmail API enabled), download its JSON and save it at that path."""
-                    .formatted(settings.credentialsFile()));
+                    (with the Gmail API enabled), download its JSON and save it at that path.\
+                    """
+                            .formatted(settings.credentialsFile()));
         }
         boolean writeAccess = settings.labels().enabled();
         var scopes = List.of(writeAccess ? GmailScopes.GMAIL_MODIFY : GmailScopes.GMAIL_READONLY);
-        var flow = new GoogleAuthorizationCodeFlow.Builder(transport, JSON, secrets, scopes)
-                .setDataStoreFactory(new FileDataStoreFactory(settings.tokensDir().toFile()))
-                .setAccessType("offline")
-                .build();
+        var flow =
+                new GoogleAuthorizationCodeFlow.Builder(transport, JSON, secrets, scopes)
+                        .setDataStoreFactory(
+                                new FileDataStoreFactory(settings.tokensDir().toFile()))
+                        .setAccessType("offline")
+                        .build();
         var receiver = new LocalServerReceiver.Builder().setHost("localhost").setPort(-1).build();
         log.info("Authorizing Gmail {} access", writeAccess ? "label (modify)" : "read-only");
 
-        // The library's default "browser" uses java.awt.Desktop, which is unreliable inside a JavaFX
+        // The library's default "browser" uses java.awt.Desktop, which is unreliable inside a
+        // JavaFX
         // app (on macOS it can silently do nothing). Instead, publish the URL: the UI opens it
         // through JavaFX and shows it in a dialog with Copy and Cancel.
-        AuthorizationCodeInstalledApp.Browser browser = url -> {
-            log.info("Waiting for Gmail authorization. If no browser opened, visit: {}", url);
-            pendingAuthorization = receiver;
-            authorizationCancelled = false;
-            events.publishEvent(new MailboxAuthorizationEvent.Required(url));
-            CompletableFuture.delayedExecutor(AUTHORIZATION_TIMEOUT_MINUTES, TimeUnit.MINUTES).execute(() -> {
-                if (pendingAuthorization == receiver) {
-                    log.warn("Gmail authorization timed out");
-                    stopQuietly(receiver);
-                }
-            });
-        };
+        AuthorizationCodeInstalledApp.Browser browser =
+                url -> {
+                    log.info(
+                            "Waiting for Gmail authorization. If no browser opened, visit: {}",
+                            url);
+                    pendingAuthorization = receiver;
+                    authorizationCancelled = false;
+                    events.publishEvent(new MailboxAuthorizationEvent.Required(url));
+                    CompletableFuture.delayedExecutor(
+                                    AUTHORIZATION_TIMEOUT_MINUTES, TimeUnit.MINUTES)
+                            .execute(
+                                    () -> {
+                                        if (pendingAuthorization == receiver) {
+                                            log.warn("Gmail authorization timed out");
+                                            stopQuietly(receiver);
+                                        }
+                                    });
+                };
         boolean granted = false;
         try {
             // One stored token per scope: switching labels on or off asks for consent once,
             // instead of reusing a token that lacks (or has more than) the needed permission.
-            Credential credential = new AuthorizationCodeInstalledApp(flow, receiver, browser)
-                    .authorize(writeAccess ? "user-modify" : "user");
+            Credential credential =
+                    new AuthorizationCodeInstalledApp(flow, receiver, browser)
+                            .authorize(writeAccess ? "user-modify" : "user");
             granted = true;
             return credential;
         } catch (IOException | RuntimeException e) {
-            // Waiting was cut short (cancel / timeout: the library then fails on the missing code with a
+            // Waiting was cut short (cancel / timeout: the library then fails on the missing code
+            // with a
             // NullPointerException), or Google returned an error (e.g. access denied).
-            throw new MailboxSetupException(authorizationCancelled
-                    ? "Gmail authorization was cancelled. Click \"Sync inbox\" to try again."
-                    : "Gmail access was not granted (" + e.getMessage() + "). Click \"Sync inbox\" to try again.");
+            throw new MailboxSetupException(
+                    authorizationCancelled
+                            ? "Gmail authorization was cancelled. Click \"Sync inbox\" to try"
+                                    + " again."
+                            : "Gmail access was not granted ("
+                                    + e.getMessage()
+                                    + "). Click \"Sync inbox\" to try again.");
         } finally {
             if (pendingAuthorization == receiver) {
                 pendingAuthorization = null;
