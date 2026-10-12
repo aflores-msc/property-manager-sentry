@@ -8,6 +8,10 @@ This is a from-scratch Java rewrite of the Python *Estate Beacon / Inbox Supervi
 **Java 25, Spring Boot 4, Spring AI 2 and LangGraph4j** fit together, and to fix the original's weak spots along the way
 (see [docs/python-to-java.md](docs/python-to-java.md)).
 
+📘 **Learning agentic AI?** [docs/agentic-ai-guide.md](docs/agentic-ai-guide.md) explains multi-agent concepts
+(agents, structured output, shared state, graphs, supervisor/router, handoff, guardrails) using this codebase.
+Test emails are in [docs/sample-emails.md](docs/sample-emails.md).
+
 ![Dashboard, dark theme](docs/images/dashboard-dark.png)
 
 ## Tech stack
