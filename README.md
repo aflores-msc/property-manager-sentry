@@ -183,6 +183,21 @@ src/main/resources/
 
 No test needs network access, a Gemini key or a display. CI runs `./gradlew build` on every push and pull request.
 
+## Code formatting
+
+Formatting is enforced with [Spotless](https://github.com/diffplug/spotless): Java with google-java-format (AOSP
+style, 4-space indent), Gradle Kotlin scripts with ktlint, and trailing whitespace / final newlines for Markdown,
+YAML, SQL, CSS and prompt files.
+
+```bash
+./gradlew spotlessApply   # reformat everything
+./gradlew spotlessCheck   # verify only (also runs as part of ./gradlew build, so CI fails on unformatted code)
+```
+
+Wrap a block in `// spotless:off` and `// spotless:on` to keep hand formatting (used for the triage graph
+definition in `TriageGraph`). To format on save in IntelliJ, install the google-java-format plugin and enable
+AOSP style.
+
 ## Notes
 
 - JavaFX runs from the classpath, not as modules, which keeps Spring Boot packaging simple. JavaFX logs a harmless

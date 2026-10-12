@@ -3,6 +3,7 @@ import org.springframework.boot.gradle.plugin.SpringBootPlugin
 plugins {
     java
     alias(libs.plugins.spring.boot)
+    alias(libs.plugins.spotless)
 }
 
 group = "com.propertymanager"
@@ -21,15 +22,16 @@ repositories {
 
 // JavaFX ships one jar per OS/CPU. We stay on the classpath (no module-info),
 // so we pick the matching classifier ourselves instead of using a plugin.
-val javafxPlatform: String = run {
-    val os = System.getProperty("os.name").lowercase()
-    val arm = System.getProperty("os.arch").let { it == "aarch64" || it == "arm64" }
-    when {
-        os.contains("win") -> "win"
-        os.contains("mac") -> if (arm) "mac-aarch64" else "mac"
-        else -> if (arm) "linux-aarch64" else "linux"
+val javafxPlatform: String =
+    run {
+        val os = System.getProperty("os.name").lowercase()
+        val arm = System.getProperty("os.arch").let { it == "aarch64" || it == "arm64" }
+        when {
+            os.contains("win") -> "win"
+            os.contains("mac") -> if (arm) "mac-aarch64" else "mac"
+            else -> if (arm) "linux-aarch64" else "linux"
+        }
     }
-}
 
 dependencies {
     implementation(platform(SpringBootPlugin.BOM_COORDINATES))
@@ -88,5 +90,46 @@ tasks.bootRun {
 tasks.bootJar {
     manifest {
         attributes("Enable-Native-Access" to "ALL-UNNAMED")
+    }
+}
+
+// Code formatting. `./gradlew spotlessApply` fixes everything; `spotlessCheck` (part of `check`, so of
+// `build` and CI) fails on unformatted files.
+spotless {
+    java {
+        target("src/**/*.java")
+        // `// spotless:off` ... `// spotless:on` keeps hand-formatted blocks (e.g. the triage graph) as written.
+        toggleOffOn()
+        // google-java-format in AOSP style (4-space indent). It keeps up with new Java syntax
+        // (e.g. unnamed `_` in record patterns), which Palantir's formatter can't parse yet.
+        // No explicit version: each Spotless release pins the google-java-format version it supports
+        // (newer ones can break its integration), so upgrading Spotless upgrades the formatter.
+        googleJavaFormat().aosp().reflowLongStrings()
+        removeUnusedImports()
+        trimTrailingWhitespace()
+        endWithNewline()
+    }
+    kotlinGradle {
+        target("*.gradle.kts")
+        ktlint()
+    }
+    format("misc") {
+        target(
+            "*.md",
+            "docs/**/*.md",
+            "config/**/*.yml",
+            ".github/**/*.yml",
+            "src/**/*.yml",
+            "src/**/*.sql",
+            "src/**/*.css",
+            "src/**/*.st",
+            ".gitignore",
+            ".gitattributes",
+            "gradle.properties",
+            "gradle/*.toml",
+        )
+        trimTrailingWhitespace()
+        leadingTabsToSpaces(4)
+        endWithNewline()
     }
 }
