@@ -1,18 +1,20 @@
 package com.propertymanager.sentry.ticket;
 
-import java.time.Instant;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
+import java.time.Instant;
 
 /** Marker that an email went through triage to completion, so it is never re-classified. */
 @Entity
 public class ProcessedEmail {
 
-    public enum Outcome { TICKETED, IGNORED }
+    public enum Outcome {
+        TICKETED,
+        IGNORED
+    }
 
     @Id
     @Column(length = 128)

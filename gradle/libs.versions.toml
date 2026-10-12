@@ -8,6 +8,7 @@ google-api-client = "2.9.1"
 google-oauth-client = "1.39.0"
 google-gmail = "v1-rev20261005-2.0.0"
 jsoup = "1.23.2"
+spotless = "8.10.4"
 
 [libraries]
 spring-ai-bom = { module = "org.springframework.ai:spring-ai-bom", version.ref = "spring-ai" }
@@ -21,3 +22,4 @@ jsoup = { module = "org.jsoup:jsoup", version.ref = "jsoup" }
 
 [plugins]
 spring-boot = { id = "org.springframework.boot", version.ref = "spring-boot" }
+spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }

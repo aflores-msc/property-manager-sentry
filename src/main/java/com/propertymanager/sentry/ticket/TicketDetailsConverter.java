@@ -12,10 +12,10 @@ import tools.jackson.databind.json.JsonMapper;
 /**
  * Stores the sealed {@link TicketDetails} as JSON text: {@code {"kind": "...", "data": {...}}}.
  *
- * <p>The discriminator lives here rather than as Jackson annotations on the records, because
- * those records double as the response schema sent to Gemini and must not carry a type field.
- * Exhaustive {@code switch}es keep both directions in step with the sealed hierarchy: a new
- * details type won't compile until it's handled here.
+ * <p>The discriminator lives here rather than as Jackson annotations on the records, because those
+ * records double as the response schema sent to Gemini and must not carry a type field. Exhaustive
+ * {@code switch}es keep both directions in step with the sealed hierarchy: a new details type won't
+ * compile until it's handled here.
  */
 @Converter
 public class TicketDetailsConverter implements AttributeConverter<TicketDetails, String> {
@@ -27,11 +27,12 @@ public class TicketDetailsConverter implements AttributeConverter<TicketDetails,
         if (details == null) {
             return null;
         }
-        String kind = switch (details) {
-            case MaintenanceDetails _ -> "maintenance";
-            case CityNoticeDetails _ -> "cityNotice";
-            case DisputeDetails _ -> "dispute";
-        };
+        String kind =
+                switch (details) {
+                    case MaintenanceDetails _ -> "maintenance";
+                    case CityNoticeDetails _ -> "cityNotice";
+                    case DisputeDetails _ -> "dispute";
+                };
         var node = JSON.createObjectNode();
         node.put("kind", kind);
         node.set("data", JSON.valueToTree(details));
@@ -44,12 +45,15 @@ public class TicketDetailsConverter implements AttributeConverter<TicketDetails,
             return null;
         }
         JsonNode node = JSON.readTree(json);
-        Class<? extends TicketDetails> type = switch (node.path("kind").asString()) {
-            case "maintenance" -> MaintenanceDetails.class;
-            case "cityNotice" -> CityNoticeDetails.class;
-            case "dispute" -> DisputeDetails.class;
-            default -> throw new IllegalArgumentException("Unknown ticket details kind in: " + json);
-        };
+        Class<? extends TicketDetails> type =
+                switch (node.path("kind").asString()) {
+                    case "maintenance" -> MaintenanceDetails.class;
+                    case "cityNotice" -> CityNoticeDetails.class;
+                    case "dispute" -> DisputeDetails.class;
+                    default ->
+                            throw new IllegalArgumentException(
+                                    "Unknown ticket details kind in: " + json);
+                };
         return JSON.treeToValue(node.get("data"), type);
     }
 }

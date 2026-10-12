@@ -13,7 +13,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.SequencedMap;
 import java.util.SequencedSet;
-
 import org.springframework.stereotype.Component;
 
 /**
@@ -23,10 +22,12 @@ import org.springframework.stereotype.Component;
 @Component
 public class TicketCsvExporter {
 
-    private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm").withZone(ZoneId.systemDefault());
+    private static final DateTimeFormatter DATE =
+            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm").withZone(ZoneId.systemDefault());
 
     public void export(List<TicketSummary> tickets, Path target) throws IOException {
-        List<SequencedMap<String, String>> rows = tickets.stream().map(TicketCsvExporter::toRow).toList();
+        List<SequencedMap<String, String>> rows =
+                tickets.stream().map(TicketCsvExporter::toRow).toList();
         SequencedSet<String> headers = new LinkedHashSet<>();
         rows.forEach(row -> headers.addAll(row.keySet()));
 
@@ -34,7 +35,8 @@ public class TicketCsvExporter {
             out.write('﻿'); // BOM, so Excel opens UTF-8 correctly
             writeLine(out, new ArrayList<>(headers));
             for (var row : rows) {
-                writeLine(out, headers.stream().map(header -> row.getOrDefault(header, "")).toList());
+                writeLine(
+                        out, headers.stream().map(header -> row.getOrDefault(header, "")).toList());
             }
         }
     }
@@ -65,7 +67,10 @@ public class TicketCsvExporter {
         if (!value.isEmpty() && "=+-@\t\r".indexOf(value.charAt(0)) >= 0) {
             value = "'" + value;
         }
-        if (value.contains(",") || value.contains("\"") || value.contains("\n") || value.contains("\r")) {
+        if (value.contains(",")
+                || value.contains("\"")
+                || value.contains("\n")
+                || value.contains("\r")) {
             value = "\"" + value.replace("\"", "\"\"") + "\"";
         }
         return value;

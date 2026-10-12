@@ -1,9 +1,8 @@
 package com.propertymanager.sentry.triage;
 
+import com.propertymanager.sentry.mail.InboundEmail;
 import java.util.Map;
 import java.util.Optional;
-
-import com.propertymanager.sentry.mail.InboundEmail;
 import org.bsc.langgraph4j.state.AgentState;
 
 /**

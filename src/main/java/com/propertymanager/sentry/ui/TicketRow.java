@@ -9,9 +9,9 @@ import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 
 /**
- * Table row view model: the immutable ticket data plus the two things the user can change in
- * place, as JavaFX properties. The table observes these properties (see {@link #observables()}),
- * so marking a ticket read or changing its status updates the row without replacing it.
+ * Table row view model: the immutable ticket data plus the two things the user can change in place,
+ * as JavaFX properties. The table observes these properties (see {@link #observables()}), so
+ * marking a ticket read or changing its status updates the row without replacing it.
  */
 final class TicketRow {
 
@@ -46,7 +46,9 @@ final class TicketRow {
         return ticket.withStatus(status.get());
     }
 
-    /** For {@code FXCollections.observableArrayList(extractor)}: changes to these fire list updates. */
+    /**
+     * For {@code FXCollections.observableArrayList(extractor)}: changes to these fire list updates.
+     */
     Observable[] observables() {
         return new Observable[] {unread, status};
     }

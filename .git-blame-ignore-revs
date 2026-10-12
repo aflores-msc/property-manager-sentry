@@ -1,0 +1,5 @@
+# Commits listed here are skipped by `git blame` (GitHub applies this file automatically; locally run
+# `git config blame.ignoreRevsFile .git-blame-ignore-revs`).
+
+# Apply Spotless formatting to all Java sources
+1227fbb9698804675b936b1a62650aebb8b9cc52

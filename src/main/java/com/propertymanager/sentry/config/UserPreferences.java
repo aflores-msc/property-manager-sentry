@@ -1,7 +1,6 @@
 package com.propertymanager.sentry.config;
 
 import java.util.prefs.Preferences;
-
 import org.springframework.stereotype.Component;
 
 /**

@@ -19,10 +19,10 @@ import org.springframework.context.PayloadApplicationEvent;
  *
  * <ul>
  *   <li>{@link #init()} runs on the JavaFX launcher thread, before any window exists, and starts
- *       Spring Boot (database, migrations, Gemini client, scheduler).</li>
- *   <li>{@link #start(Stage)} runs on the JavaFX Application Thread and has Spring build the
- *       {@link MainWindow}.</li>
- *   <li>{@link #stop()} closes the Spring context when the window closes.</li>
+ *       Spring Boot (database, migrations, Gemini client, scheduler).
+ *   <li>{@link #start(Stage)} runs on the JavaFX Application Thread and has Spring build the {@link
+ *       MainWindow}.
+ *   <li>{@link #stop()} closes the Spring context when the window closes.
  * </ul>
  */
 public class SentryFxApplication extends Application {
@@ -33,9 +33,11 @@ public class SentryFxApplication extends Application {
     @Override
     public void init() {
         try {
-            context = new SpringApplicationBuilder(SentryApplication.class)
-                    .headless(false) // the OAuth flow opens the system browser through java.awt.Desktop
-                    .run(getParameters().getRaw().toArray(String[]::new));
+            context =
+                    new SpringApplicationBuilder(SentryApplication.class)
+                            .headless(false) // the OAuth flow opens the system browser through
+                            // java.awt.Desktop
+                            .run(getParameters().getRaw().toArray(String[]::new));
         } catch (Throwable e) {
             startupFailure = e;
         }
@@ -51,15 +53,17 @@ public class SentryFxApplication extends Application {
         }
         MainWindow window = context.getAutowireCapableBeanFactory().createBean(MainWindow.class);
         // Forward sync progress and Gmail authorization requests (Spring events) to the window.
-        context.addApplicationListener((ApplicationEvent event) -> {
-            if (event instanceof PayloadApplicationEvent<?> payload) {
-                switch (payload.getPayload()) {
-                    case SyncEvent sync -> window.onSyncEvent(sync);
-                    case MailboxAuthorizationEvent auth -> window.onAuthorizationEvent(auth);
-                    default -> { }
-                }
-            }
-        });
+        context.addApplicationListener(
+                (ApplicationEvent event) -> {
+                    if (event instanceof PayloadApplicationEvent<?> payload) {
+                        switch (payload.getPayload()) {
+                            case SyncEvent sync -> window.onSyncEvent(sync);
+                            case MailboxAuthorizationEvent auth ->
+                                    window.onAuthorizationEvent(auth);
+                            default -> {}
+                        }
+                    }
+                });
         window.show(stage, getHostServices());
     }
 
@@ -78,10 +82,12 @@ public class SentryFxApplication extends Application {
         var alert = new Alert(Alert.AlertType.ERROR);
         alert.setTitle("Property Manager Sentry");
         alert.setHeaderText("Sentry could not start");
-        alert.setContentText("""
+        alert.setContentText(
+                """
                 Check ~/.property-manager-sentry/application.yml (see the README).
                 The most common cause is a missing Gemini API key: set spring.ai.google.genai.api-key \
-                there, or the GOOGLE_API_KEY environment variable.""");
+                there, or the GOOGLE_API_KEY environment variable.\
+                """);
         var details = new TextArea(root.getClass().getName() + ": " + root.getMessage());
         details.setEditable(false);
         details.setWrapText(true);

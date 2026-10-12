@@ -1,7 +1,5 @@
 package com.propertymanager.sentry.ticket;
 
-import java.time.Instant;
-
 import com.propertymanager.sentry.triage.Category;
 import com.propertymanager.sentry.triage.Priority;
 import com.propertymanager.sentry.triage.TicketDetails;
@@ -16,6 +14,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Lob;
+import java.time.Instant;
 
 /** A property-management email turned into a piece of work. */
 @Entity
@@ -79,9 +78,20 @@ public class Ticket {
         // for JPA
     }
 
-    public Ticket(String emailId, Instant receivedAt, Instant processedAt, String sender, String subject,
-                  Category category, Priority priority, String senderType, String propertyAddress,
-                  String unitNumber, String rationale, TicketDetails details, String rawBody) {
+    public Ticket(
+            String emailId,
+            Instant receivedAt,
+            Instant processedAt,
+            String sender,
+            String subject,
+            Category category,
+            Priority priority,
+            String senderType,
+            String propertyAddress,
+            String unitNumber,
+            String rationale,
+            TicketDetails details,
+            String rawBody) {
         this.emailId = emailId;
         this.receivedAt = receivedAt;
         this.processedAt = processedAt;

@@ -1,26 +1,25 @@
 package com.propertymanager.sentry.mail;
 
+import com.google.api.services.gmail.model.MessagePart;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Optional;
 import java.util.regex.Pattern;
-
-import com.google.api.services.gmail.model.MessagePart;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.TextNode;
 
 /**
  * Turns a Gmail MIME tree into plain text: the first {@code text/plain} part if there is one,
- * otherwise the first {@code text/html} part converted to text with jsoup (a real HTML parser,
- * so entities, scripts and styles are handled properly).
+ * otherwise the first {@code text/html} part converted to text with jsoup (a real HTML parser, so
+ * entities, scripts and styles are handled properly).
  */
 public final class EmailBodyExtractor {
 
-    private static final Pattern CHARSET = Pattern.compile("charset=\"?([\\w.:-]+)", Pattern.CASE_INSENSITIVE);
+    private static final Pattern CHARSET =
+            Pattern.compile("charset=\"?([\\w.:-]+)", Pattern.CASE_INSENSITIVE);
 
-    private EmailBodyExtractor() {
-    }
+    private EmailBodyExtractor() {}
 
     public static String extractText(MessagePart payload) {
         if (payload == null) {
@@ -35,11 +34,13 @@ public final class EmailBodyExtractor {
     static String htmlToText(String html) {
         var document = Jsoup.parse(html);
         document.select("script, style, head").remove();
-        // Keep line structure from <br> and block elements: it helps the LLM read addresses and lists.
+        // Keep line structure from <br> and block elements: it helps the LLM read addresses and
+        // lists.
         document.select("br").forEach(br -> br.after(new TextNode("\n")));
         document.select("p, div, li, tr, h1, h2, h3, h4, h5, h6")
                 .forEach(block -> block.prependChild(new TextNode("\n")));
-        return document.body().wholeText()
+        return document.body()
+                .wholeText()
                 .replace(' ', ' ')
                 .replaceAll("[ \\t\\x0B\\f\\r]+", " ")
                 .replaceAll(" *\n *", "\n")
