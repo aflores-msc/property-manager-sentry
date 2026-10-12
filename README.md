@@ -29,7 +29,7 @@ This is a from-scratch Java rewrite of the Python *Estate Beacon / Inbox Supervi
                       ┌──────────────── LangGraph4j StateGraph ────────────────┐
  Gmail ──▶ InboxSync ─┤  supervisor ──┬──▶ maintenance ──┐                     │
  (OAuth2,   Service   │   (route)     ├──▶ cityNotice  ──┼──▶ END              │──▶ TicketService ──▶ H2
-  read-only) │        │               ├──▶ dispute     ──┘                     │       │
+  labels)    │        │               ├──▶ dispute     ──┘                     │       │
              │        │               └──▶ END (IGNORED)                       │       │
              │        └────────────── each node = one Gemini call via Spring AI┘       │
              │                                                                         ▼
