@@ -19,6 +19,8 @@ import com.propertymanager.sentry.inbox.AutoSyncScheduler;
 import com.propertymanager.sentry.inbox.InboxSyncService;
 import com.propertymanager.sentry.inbox.SyncEvent;
 import com.propertymanager.sentry.inbox.SyncTrigger;
+import com.propertymanager.sentry.mail.MailboxAuthorizationEvent;
+import com.propertymanager.sentry.mail.MailboxClient;
 import com.propertymanager.sentry.ticket.TicketCsvExporter;
 import com.propertymanager.sentry.ticket.TicketService;
 import com.propertymanager.sentry.ticket.TicketStatus;
@@ -27,6 +29,7 @@ import com.propertymanager.sentry.triage.Category;
 import com.propertymanager.sentry.triage.Priority;
 import com.propertymanager.sentry.triage.TriageOutcome;
 import javafx.application.Application;
+import javafx.application.HostServices;
 import javafx.application.Platform;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.collections.FXCollections;
@@ -77,6 +80,7 @@ public class MainWindow {
     private final AutoSyncScheduler autoSync;
     private final TicketCsvExporter csvExporter;
     private final UserPreferences preferences;
+    private final MailboxClient mailbox;
 
     // The extractor makes the list fire "updated" events when a row's unread/status property changes.
     private final ObservableList<TicketRow> allTickets = FXCollections.observableArrayList(TicketRow::observables);
@@ -90,18 +94,22 @@ public class MainWindow {
     private final Label countsText = new Label();
     private final TicketDetailPane detailPane = new TicketDetailPane(this::changeStatus, this::showOriginal);
     private Stage stage;
+    private HostServices hostServices;
+    private AuthorizationDialog authorizationDialog;
 
     public MainWindow(TicketService tickets, InboxSyncService syncService, AutoSyncScheduler autoSync,
-                      TicketCsvExporter csvExporter, UserPreferences preferences) {
+                      TicketCsvExporter csvExporter, UserPreferences preferences, MailboxClient mailbox) {
         this.tickets = tickets;
         this.syncService = syncService;
         this.autoSync = autoSync;
         this.csvExporter = csvExporter;
         this.preferences = preferences;
+        this.mailbox = mailbox;
     }
 
-    public void show(Stage stage) {
+    public void show(Stage stage, HostServices hostServices) {
         this.stage = stage;
+        this.hostServices = hostServices;
         applyTheme(preferences.darkTheme());
 
         var root = new BorderPane(body(), header(), null, statusBar(), null);
@@ -364,6 +372,31 @@ public class MainWindow {
                 error("Could not sync the inbox", message);
             }
         }
+    }
+
+    // ---- Gmail authorization (background threads) ---------------------------------------------
+
+    public void onAuthorizationEvent(MailboxAuthorizationEvent event) {
+        Platform.runLater(() -> {
+            switch (event) {
+                case MailboxAuthorizationEvent.Required(var url) -> {
+                    statusText.setText("Waiting for you to allow Gmail access in your browser…");
+                    hostServices.showDocument(url);
+                    if (authorizationDialog != null) {
+                        authorizationDialog.close();
+                    }
+                    authorizationDialog = new AuthorizationDialog(stage, url, hostServices::showDocument, mailbox::cancelAuthorization);
+                    authorizationDialog.show();
+                }
+                case MailboxAuthorizationEvent.Finished(var granted) -> {
+                    if (authorizationDialog != null) {
+                        authorizationDialog.close();
+                        authorizationDialog = null;
+                    }
+                    statusText.setText(granted ? "Gmail connected. Checking inbox…" : "Gmail access not granted");
+                }
+            }
+        });
     }
 
     private static String describe(TriageOutcome outcome) {

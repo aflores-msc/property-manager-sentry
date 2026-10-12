@@ -11,6 +11,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import com.google.api.client.auth.oauth2.Credential;
@@ -32,6 +34,7 @@ import com.propertymanager.sentry.config.SentryProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 
 /**
@@ -56,23 +59,39 @@ public class GmailMailboxClient implements MailboxClient {
     private static final String PROCESSED = "Processed";
     /** Gmail's limit for ids in one batchModify call. */
     private static final int BATCH_LIMIT = 1000;
+    /** How long to wait for the user to approve access in the browser. */
+    private static final long AUTHORIZATION_TIMEOUT_MINUTES = 5;
 
     private final SentryProperties.Gmail settings;
+    private final ApplicationEventPublisher events;
     // Plain JDK HTTP transport: honors the JVM's trust store and proxy settings.
     private final NetHttpTransport transport = new NetHttpTransport();
     /** Label name (lower case: Gmail names are case-insensitive) to label id. Guarded by {@code this}. */
     private final Map<String, String> labelIds = new HashMap<>();
     private volatile Gmail gmail;
+    /** Set while waiting for the user to approve access in the browser. */
+    private volatile LocalServerReceiver pendingAuthorization;
+    private volatile boolean authorizationCancelled;
 
     @Autowired
-    public GmailMailboxClient(SentryProperties properties) {
+    public GmailMailboxClient(SentryProperties properties, ApplicationEventPublisher events) {
         this.settings = properties.gmail();
+        this.events = events;
     }
 
     /** For tests: use a ready-made Gmail client instead of running the OAuth flow. */
     GmailMailboxClient(SentryProperties properties, Gmail gmail) {
-        this(properties);
+        this(properties, _ -> { });
         this.gmail = gmail;
+    }
+
+    @Override
+    public void cancelAuthorization() {
+        LocalServerReceiver receiver = pendingAuthorization;
+        if (receiver != null) {
+            authorizationCancelled = true;
+            stopQuietly(receiver);
+        }
     }
 
     @Override
@@ -205,10 +224,50 @@ public class GmailMailboxClient implements MailboxClient {
                 .setAccessType("offline")
                 .build();
         var receiver = new LocalServerReceiver.Builder().setHost("localhost").setPort(-1).build();
-        log.info("Authorizing Gmail {} access (a browser window opens if consent is needed)",
-                writeAccess ? "label (modify)" : "read-only");
-        // One stored token per scope: switching labels on or off asks for consent once,
-        // instead of reusing a token that lacks (or has more than) the needed permission.
-        return new AuthorizationCodeInstalledApp(flow, receiver).authorize(writeAccess ? "user-modify" : "user");
+        log.info("Authorizing Gmail {} access", writeAccess ? "label (modify)" : "read-only");
+
+        // The library's default "browser" uses java.awt.Desktop, which is unreliable inside a JavaFX
+        // app (on macOS it can silently do nothing). Instead, publish the URL: the UI opens it
+        // through JavaFX and shows it in a dialog with Copy and Cancel.
+        AuthorizationCodeInstalledApp.Browser browser = url -> {
+            log.info("Waiting for Gmail authorization. If no browser opened, visit: {}", url);
+            pendingAuthorization = receiver;
+            authorizationCancelled = false;
+            events.publishEvent(new MailboxAuthorizationEvent.Required(url));
+            CompletableFuture.delayedExecutor(AUTHORIZATION_TIMEOUT_MINUTES, TimeUnit.MINUTES).execute(() -> {
+                if (pendingAuthorization == receiver) {
+                    log.warn("Gmail authorization timed out");
+                    stopQuietly(receiver);
+                }
+            });
+        };
+        boolean granted = false;
+        try {
+            // One stored token per scope: switching labels on or off asks for consent once,
+            // instead of reusing a token that lacks (or has more than) the needed permission.
+            Credential credential = new AuthorizationCodeInstalledApp(flow, receiver, browser)
+                    .authorize(writeAccess ? "user-modify" : "user");
+            granted = true;
+            return credential;
+        } catch (IOException | RuntimeException e) {
+            // Waiting was cut short (cancel / timeout: the library then fails on the missing code with a
+            // NullPointerException), or Google returned an error (e.g. access denied).
+            throw new MailboxSetupException(authorizationCancelled
+                    ? "Gmail authorization was cancelled. Click \"Sync inbox\" to try again."
+                    : "Gmail access was not granted (" + e.getMessage() + "). Click \"Sync inbox\" to try again.");
+        } finally {
+            if (pendingAuthorization == receiver) {
+                pendingAuthorization = null;
+                events.publishEvent(new MailboxAuthorizationEvent.Finished(granted));
+            }
+        }
+    }
+
+    private static void stopQuietly(LocalServerReceiver receiver) {
+        try {
+            receiver.stop(); // wakes up the thread blocked waiting for the browser redirect
+        } catch (IOException e) {
+            log.debug("Stopping the OAuth receiver failed", e);
+        }
     }
 }

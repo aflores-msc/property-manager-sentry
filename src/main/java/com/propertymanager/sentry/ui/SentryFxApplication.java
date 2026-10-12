@@ -3,6 +3,7 @@ package com.propertymanager.sentry.ui;
 import atlantafx.base.theme.PrimerDark;
 import com.propertymanager.sentry.SentryApplication;
 import com.propertymanager.sentry.inbox.SyncEvent;
+import com.propertymanager.sentry.mail.MailboxAuthorizationEvent;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.control.Alert;
@@ -49,13 +50,17 @@ public class SentryFxApplication extends Application {
             return;
         }
         MainWindow window = context.getAutowireCapableBeanFactory().createBean(MainWindow.class);
-        // Forward sync progress (published as Spring events by InboxSyncService) to the window.
+        // Forward sync progress and Gmail authorization requests (Spring events) to the window.
         context.addApplicationListener((ApplicationEvent event) -> {
-            if (event instanceof PayloadApplicationEvent<?> payload && payload.getPayload() instanceof SyncEvent sync) {
-                window.onSyncEvent(sync);
+            if (event instanceof PayloadApplicationEvent<?> payload) {
+                switch (payload.getPayload()) {
+                    case SyncEvent sync -> window.onSyncEvent(sync);
+                    case MailboxAuthorizationEvent auth -> window.onAuthorizationEvent(auth);
+                    default -> { }
+                }
             }
         });
-        window.show(stage);
+        window.show(stage, getHostServices());
     }
 
     @Override

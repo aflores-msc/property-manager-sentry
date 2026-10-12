@@ -80,6 +80,12 @@ public class InboxSyncService {
         return CompletableFuture.supplyAsync(() -> {
             try {
                 return sync(trigger);
+            } catch (Throwable e) {
+                // Anything unexpected must still end the sync for listeners, or the UI would show
+                // a sync that never finishes.
+                log.error("Sync failed unexpectedly", e);
+                events.publishEvent(new SyncEvent.Aborted("Unexpected error: " + e));
+                return null;
             } finally {
                 running.set(false);
             }
@@ -89,6 +95,7 @@ public class InboxSyncService {
     SyncSummary sync(SyncTrigger trigger) {
         Instant started = clock.instant();
         events.publishEvent(new SyncEvent.Started(trigger));
+        log.info("{} sync started", trigger);
 
         List<String> candidates;
         Set<String> known;
@@ -99,12 +106,14 @@ public class InboxSyncService {
             log.warn("Sync aborted: {}", e.getMessage());
             events.publishEvent(new SyncEvent.Aborted(e.getMessage()));
             return null;
-        } catch (Exception e) {
+        } catch (Exception | LinkageError e) {
             log.error("Sync aborted: could not list mailbox", e);
             events.publishEvent(new SyncEvent.Aborted(e.getMessage()));
             return null;
         }
         List<String> toProcess = candidates.stream().filter(id -> !known.contains(id)).toList();
+        log.info("Mailbox lists {} message(s): {} already processed, {} to triage",
+                candidates.size(), known.size(), toProcess.size());
         events.publishEvent(new SyncEvent.Planned(candidates.size(), known.size(), toProcess.size()));
 
         // Known emails still being listed were processed before labeling was on, or their

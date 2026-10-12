@@ -29,4 +29,8 @@ public interface MailboxClient {
      */
     default void markTriaged(Collection<String> messageIds, String category) throws IOException {
     }
+
+    /** Stops waiting for a pending browser authorization (see {@link MailboxAuthorizationEvent}), if any. */
+    default void cancelAuthorization() {
+    }
 }
