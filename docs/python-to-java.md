@@ -37,6 +37,9 @@ maps each piece to its Java counterpart and lists what was improved along the wa
 **Robustness and cost**
 - **Bounded fetch.** At most `max-messages` per sync and a configurable Gmail query. The Python app paged through
   every unread email.
+- **Gmail labels as sync state.** Triaged emails get `Sentry/Processed` (and a category label) and the query
+  excludes them, so already-seen mail isn't listed again and doesn't use up the per-sync cap. The Python app, being
+  read-only, listed every still-unread email on every fetch. Your read/unread state is left alone.
 - **Parallel triage** on virtual threads with a concurrency cap, plus a per-email timeout.
 - **The graph is compiled once at startup.** The Python app rebuilt it for every email.
 - **Long bodies are truncated** before reaching the LLM.

@@ -18,7 +18,7 @@ This is a from-scratch Java rewrite of the Python *Estate Beacon / Inbox Supervi
 | Application framework | Spring Boot 4.1 (DI, configuration properties, events, scheduling) |
 | LLM access | Spring AI 2.0 `ChatClient` with Google Gemini and native structured output |
 | Agent workflow | LangGraph4j 1.9 `StateGraph` (supervisor plus specialist nodes) |
-| Mail | Gmail API Java client, OAuth2 installed-app flow, read-only scope |
+| Mail | Gmail API Java client, OAuth2 installed-app flow, Gmail labels for sync state |
 | Persistence | H2 file database, Spring Data JPA (Hibernate 7), Flyway migrations |
 | UI | JavaFX 25 with the AtlantaFX Primer theme (dark and light) |
 | Build | Gradle 9 (Kotlin DSL, version catalog, toolchains) |
@@ -44,7 +44,10 @@ This is a from-scratch Java rewrite of the Python *Estate Beacon / Inbox Supervi
    With native structured output, Spring AI turns the record into a JSON schema, so Gemini has to answer in that shape.
 4. **`TicketService`** stores the ticket and a "processed" marker **in one transaction**. Ignored emails get only the
    marker. Failed ones get nothing, so they are retried on the next sync.
-5. Progress is published as **Spring application events**; the JavaFX window listens and updates live.
+5. The email is then **labeled in Gmail**: `Sentry/Processed` on everything triaged, plus `Sentry/Maintenance`,
+   `Sentry/City Notice` or `Sentry/Tenant Dispute` on tickets. The search query excludes `Sentry/Processed`, so the
+   next sync only lists mail the app hasn't seen. You can also browse the categories from Gmail itself.
+6. Progress is published as **Spring application events**; the JavaFX window listens and updates live.
 
 ## Getting started
 
@@ -87,7 +90,10 @@ cp ~/Downloads/client_secret_*.json ~/.property-manager-sentry/credentials.json
 ./gradlew bootRun
 ```
 
-The first **Sync inbox** opens your browser to grant Gmail read-only access.
+The first **Sync inbox** opens your browser to grant Gmail access. With labels on (the default) Google asks for
+permission to "read, compose and send emails" (the `gmail.modify` scope, which has no narrower labels-only variant).
+The app only ever adds its own `Sentry/*` labels: it never marks mail read, moves, deletes or sends anything.
+Google shows an "unverified app" warning for your own OAuth client; that's expected for a personal test-mode app.
 
 ### 4. Build a runnable jar
 
@@ -106,6 +112,8 @@ The jar contains the JavaFX native libraries for the OS it was built on. Build o
 | `spring.ai.google.genai.chat.model` | `gemini-2.5-flash` | Gemini model |
 | `sentry.gmail.query` | `in:inbox is:unread` | Gmail search selecting emails to triage |
 | `sentry.gmail.max-messages` | `50` | Cap per sync, so a big backlog can't trigger hundreds of LLM calls |
+| `sentry.gmail.labels.enabled` | `true` | Label triaged emails and skip labeled ones; `false` keeps the app read-only |
+| `sentry.gmail.labels.prefix` | `Sentry` | Parent label name |
 | `sentry.triage.concurrency` | `2` | Emails triaged in parallel |
 | `sentry.triage.max-body-chars` | `20000` | Longer bodies are truncated before reaching the LLM |
 | `sentry.triage.timeout` | `90s` | Per-email time limit |
@@ -142,7 +150,9 @@ src/main/resources/
 - `TriageGraphTest` exercises the LangGraph4j routing with fake agents (no LLM).
 - `GeminiTriageAgentsTest` checks prompt rendering and structured-output mapping with a stub `ChatModel`.
 - `InboxSyncServiceIT` boots the full Spring context (Flyway, JPA on in-memory H2, the real graph) with a fake
-  mailbox and fake agents, and covers de-duplication, retries, persistence and events.
+  mailbox and fake agents, and covers de-duplication, labeling, retries, persistence and events.
+- `GmailMailboxClientTest` runs the real Gmail client against a fake HTTP transport to check the query, label
+  creation and `batchModify` calls.
 - Unit tests cover MIME/HTML extraction, prompt-injection guarding and CSV escaping.
 
 No test needs network access, a Gemini key or a display. CI runs `./gradlew build` on every push and pull request.
@@ -151,4 +161,7 @@ No test needs network access, a Gemini key or a display. CI runs `./gradlew buil
 
 - JavaFX runs from the classpath, not as modules, which keeps Spring Boot packaging simple. JavaFX logs a harmless
   `Unsupported JavaFX configuration: classes were loaded from 'unnamed module'` warning at startup because of this.
-- The app only requests `gmail.readonly`. It never marks, moves or sends mail; de-duplication is tracked locally.
+- **Labels vs read-only.** Labeling is best effort: if a label can't be applied (e.g. you unticked the permission on
+  the consent screen), the email is still de-duplicated by the local `processed_email` table and gets labeled on a
+  later sync. Set `sentry.gmail.labels.enabled: false` to run with the `gmail.readonly` scope only. Each scope keeps
+  its own stored token in `tokens/`, so switching asks for consent once.

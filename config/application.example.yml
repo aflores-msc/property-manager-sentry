@@ -16,6 +16,10 @@ sentry:
     # Any Gmail search query: https://support.google.com/mail/answer/7190
     query: "in:inbox is:unread newer_than:14d"
     max-messages: 50
+    labels:
+      # true (default): label triaged mail Sentry/Processed, Sentry/Maintenance, ... and skip it on
+      # later syncs (needs the gmail.modify scope). false: read-only access.
+      enabled: true
   triage:
     # Emails triaged in parallel. Keep it low on the Gemini free tier (rate limits).
     concurrency: 2
