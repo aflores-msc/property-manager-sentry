@@ -12,8 +12,13 @@ out/
 # OS
 .DS_Store
 
-# Local secrets / data (the app keeps these in ~/.property-manager-sentry, never in the repo)
+# Local secrets / data. Kept in ~/.property-manager-sentry by default, or in the project folder
+# (config/application.yml + data/) if you choose that setup: either way, never committed.
 application-local.*
+/config/application.yml
+/config/application.yaml
+/config/application.properties
+/data/
 credentials.json
 tokens/
 *.mv.db

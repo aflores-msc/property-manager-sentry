@@ -90,6 +90,28 @@ cp ~/Downloads/client_secret_*.json ~/.property-manager-sentry/credentials.json
 ./gradlew bootRun
 ```
 
+#### Alternative: keep everything in the project folder
+
+Spring Boot also reads `config/application.yml` from the folder the app is started in, so you can keep all your
+files next to the code instead of in your home folder. Both `config/application.yml` and `data/` are in
+`.gitignore`, so your key and Gmail credentials can't be committed by accident.
+
+```bash
+cp config/application.example.yml config/application.yml   # API key goes here
+mkdir -p data
+cp ~/Downloads/client_secret_*.json data/credentials.json
+```
+
+Add this to `config/application.yml` so the database, Gmail token and logs go to `data/` too:
+
+```yaml
+sentry:
+  data-dir: ${user.dir}/data
+```
+
+Then start the app from the project folder (`./gradlew bootRun` always does). To keep only the Gmail client file
+elsewhere, set `sentry.gmail.credentials-file` to any path instead.
+
 The first **Sync inbox** opens your browser to grant Gmail access. With labels on (the default) Google asks for
 permission to "read, compose and send emails" (the `gmail.modify` scope, which has no narrower labels-only variant).
 The app only ever adds its own `Sentry/*` labels: it never marks mail read, moves, deletes or sends anything.
